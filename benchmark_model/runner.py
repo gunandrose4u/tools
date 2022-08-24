@@ -24,11 +24,11 @@ MODEL_FILETPYE_MAPPING = {"onnxruntime": [".onnx"], "torch": [".bin", ".pytorch"
 
 
 class Runner(object):
-    def __init__(self, config, data_path, model_path, runner_id):
+    def __init__(self, config, data_path, model_path, device_id):
         self._config = config
         self._data_path = data_path
         self._model_path = model_path
-        self._runner_id = runner_id
+        self._device_id = device_id
 
         backend_opts = {}
         if self._config.num_threads > 0:
@@ -38,7 +38,7 @@ class Runner(object):
             backend_opts['use_gpu'] = self._config.use_gpu
 
         if self._config.amd_gpu:
-            backend_opts['device_id'] = self._runner_id
+            backend_opts['device_id'] = self._device_id
         self._backend = get_backend(self._config.framework, backend_opts)
         self._backend.load(self._model_path)
 
@@ -46,9 +46,10 @@ class Runner(object):
 
     def run(self):
         if not self._config.detect_batch_size:
-            return self._run_with_batch(self._config.batch_size)
+            self._run_with_batch(self._config.batch_size)
         else:
             detected_batch_sizes = []
+            search_step = 8
             batch_size = self._config.detect_start_batch_size
             while(True):
                 res_benchmark = self._run_with_batch(batch_size)
@@ -56,11 +57,11 @@ class Runner(object):
 
                 if batch_size >= self._config.detect_end_batch_size:
                     max_idx = np.argmax(detected_batch_sizes)
-                    logger.info(f"Best batch size is {batch_size + max_idx}, qps={detected_batch_sizes[max_idx]}")
+                    logger.info(f"Best batch size is {self._config.detect_start_batch_size + max_idx * search_step}, qps={detected_batch_sizes[max_idx]}")
                     logger.info(detected_batch_sizes)
                     break
                 else:
-                    batch_size += 1
+                    batch_size += search_step
                     self._backend.clear_perf_details()
 
     def _run_with_batch(self, batch_size):
