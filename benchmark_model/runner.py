@@ -1,15 +1,8 @@
-
-from ast import arg
 import os
-from random import random
 import sys
-import csv
 import traceback
 import pathlib
 import numpy as np
-import datetime
-import random
-import time
 import threading
 
 from utilities import parse_arguments, save_dict_to_csv
@@ -20,7 +13,7 @@ from anubis_logger import logger
 
 #BUILTIN_MODELS = ['bert-squad', 'bart-base', 'xlm-mlm-en-2048', 'ssd-resnet34']
 FRAMEWORK_MAAPING = {"onnxruntime": "onnx", "torch": "torch"}
-MODEL_FILETPYE_MAPPING = {"onnxruntime": [".onnx"], "torch": [".bin", ".pytorch"]}
+MODEL_FILETPYE_MAPPING = {"onnxruntime": [".onnx", ".ort"], "torch": [".bin", ".pytorch"]}
 
 
 class Runner(object):
@@ -37,8 +30,9 @@ class Runner(object):
         if self._config.use_gpu:
             backend_opts['use_gpu'] = self._config.use_gpu
 
-        if self._config.amd_gpu:
-            backend_opts['device_id'] = self._device_id
+            if self._device_id >= 0:
+                backend_opts['device_id'] = self._device_id
+
         self._backend = get_backend(self._config.framework, backend_opts)
         self._backend.load(self._model_path)
 
@@ -105,6 +99,7 @@ def main():
         runner = Runner(args, data_path, model_path, dv_id)
         for i in range(args.num_runner_threads):
             t = threading.Thread(target=runner.run)
+            t.daemon = True
             runner_threads.append(t)
 
     for t in runner_threads:

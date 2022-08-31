@@ -5,7 +5,8 @@ class Backend():
     def __init__(self, kwargs):
         self.predict_times = []
         self._num_threads = kwargs.get("num_threads")
-        self._use_gpu = kwargs.get("use_gpu")
+        self._use_gpu = kwargs.get("use_gpu", False)
+        self._optioins = kwargs.get("options", False)
 
     def version(self):
         raise NotImplementedError("Backend:version")

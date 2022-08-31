@@ -134,7 +134,7 @@ def parse_arguments():
         "--device_ids",
         nargs="+",
         type=int,
-        default=[0],
+        default=[-1],
         help="Id of devices on which will be infernced, for each device id will a backend for it",
     )
 
