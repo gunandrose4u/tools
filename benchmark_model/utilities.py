@@ -1,5 +1,6 @@
 import argparse
 import os
+import json
 
 DEFAULT_METRICS_CSV_FILE = "metrics.csv"
 
@@ -11,7 +12,7 @@ def parse_arguments():
         "--model",
         required=True,
         type=str,
-        choices=["bert-squad", "ssd-resnet34", "bart-base", "xlm-mlm-en-2048"],
+        #choices=["bert-squad", "ssd-resnet34", "bart-base", "xlm-mlm-en-2048", "distilgpt2-fp16", "bert-base-cased", "bert_base_office"],
         help="Model for benchmark",
     )
 
@@ -97,7 +98,7 @@ def parse_arguments():
     parser.add_argument(
         "--warmup_times",
         required=False,
-        default=20,
+        default=5,
         type=int,
         help="Warmup times before calculate metrics of model",
     )
@@ -157,13 +158,33 @@ def parse_arguments():
         action="store_true",
         help="Run on gpu device")
 
+    parser.add_argument(
+        "--ort_io_binding",
+        required=False,
+        action="store_true",
+        help="Run ort with io binding")
+
+    parser.add_argument(
+        "--mlperf_config",
+        required=False,
+        type=str,
+        default="",
+        help="Detail config for run in mlperf benchmarker",
+    )
+
+    parser.add_argument(
+        "--mlperf_scenario",
+        required=False,
+        type=str,
+        choices=["SingleStream", "Offline"],
+        help="Mlperf scenario",
+    )
+
+
     args = parser.parse_args()
     return args
 
-def save_dict_to_csv(input_dict, csv_path=None):
-    if not csv_path:
-        csv_path = DEFAULT_METRICS_CSV_FILE
-
+def save_dict_to_csv(input_dict, csv_path=DEFAULT_METRICS_CSV_FILE):
     dict = input_dict.copy()
     if not os.path.exists(csv_path):
         with open(csv_path, 'w') as f:
@@ -174,3 +195,7 @@ def save_dict_to_csv(input_dict, csv_path=None):
 
     with open(csv_path, 'a') as f:
         f.write(f"{','.join(dict.values())}\n")
+
+def load_json_from_file(path):
+    with open(path, 'r') as f:
+        return json.load(f)

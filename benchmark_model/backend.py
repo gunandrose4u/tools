@@ -7,6 +7,7 @@ class Backend():
         self._num_threads = kwargs.get("num_threads")
         self._use_gpu = kwargs.get("use_gpu", False)
         self._optioins = kwargs.get("options", False)
+        self.loaded_model = None
 
     def version(self):
         raise NotImplementedError("Backend:version")
@@ -31,16 +32,36 @@ class Backend():
         self.predict_times.clear()
 
 
-def get_backend(backend, kwargs):
-    if backend == "onnxruntime":
-        from backend_onnxruntime import BackendOnnxruntime
-        backend = BackendOnnxruntime(kwargs)
-    elif backend == "torch":
-        from backend_pytorch_native import BackendPytorchNative
-        backend = BackendPytorchNative(kwargs)
-    else:
-        raise ValueError("unknown backend: " + backend)
-    return backend
+class BackendFactory():
+    VALID_BACKENDS = ["onnxruntime", "pytorch-native"]
 
+    def __init__(self):
+        pass
 
-VALID_BACKENDS = ["onnxruntime", "pytorch-native"]
+    def get_backend(self, config, visable_device=0):
+        bk_opts = self._build_backend_options(config, visable_device)
+        if config.framework == "onnxruntime":
+            from backend_onnxruntime import BackendOnnxruntime
+            backend = BackendOnnxruntime(bk_opts)
+        elif config.framework == "torch":
+            from backend_pytorch_native import BackendPytorchNative
+            backend = BackendPytorchNative(bk_opts)
+        else:
+            raise ValueError("unknown backend: " + config.framework)
+        return backend
+
+    def _build_backend_options(self, config, visable_device):
+        backend_opts = {}
+        if config.num_threads > 0:
+            backend_opts['num_threads'] = config.num_threads
+
+        if config.use_gpu:
+            backend_opts['use_gpu'] = config.use_gpu
+
+            if visable_device >= 0:
+                backend_opts['device_id'] = visable_device
+
+        if config.ort_io_binding:
+            backend_opts['ort_io_binding'] = config.ort_io_binding
+
+        return backend_opts

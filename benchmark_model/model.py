@@ -6,6 +6,9 @@ class Model(ABC):
     def __init__(self):
         self._backend = None
 
+    @property
+    def name(self):
+        raise NotImplementedError()
 
     @property
     def inputs(self):
@@ -13,8 +16,4 @@ class Model(ABC):
 
     @property
     def outputs(self):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def benchmark(self):
         raise NotImplementedError()

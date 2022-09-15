@@ -1,0 +1,16 @@
+{
+    "userConf": "",
+    "processThreadCount": 2,
+    "logSettings": {
+        "outputDir": "mlperf_results",
+        "copySummaryToStdout": true,
+        "enableTrace": false
+    },
+    "testSettings": {
+        "fromFile": "",
+        "overrideValues": {
+            "single_stream_expected_latency_ns": 1131321,
+            "offline_expected_qps": 300
+        }
+    }
+}

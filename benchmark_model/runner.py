@@ -6,9 +6,10 @@ import numpy as np
 import threading
 
 from utilities import parse_arguments, save_dict_to_csv
-from backend import get_backend
-from data_loader import FileDataLoader
-from benchmarker import Benchmarker
+from backend import BackendFactory
+from data_loader import FileDataLoader, DataLoaderFactory
+from benchmarker import DirectBenchmarker
+from mlperf_benchmarker import MlPerfBenchmarker
 from anubis_logger import logger
 
 #BUILTIN_MODELS = ['bert-squad', 'bart-base', 'xlm-mlm-en-2048', 'ssd-resnet34']
@@ -17,26 +18,18 @@ MODEL_FILETPYE_MAPPING = {"onnxruntime": [".onnx", ".ort"], "torch": [".bin", ".
 
 
 class Runner(object):
-    def __init__(self, config, data_path, model_path, device_id):
+    def __init__(self, config, data_path, model_path, device_id, backend_factory=None, data_loader_factory=None):
         self._config = config
         self._data_path = data_path
         self._model_path = model_path
         self._device_id = device_id
+        self._backend_factory = backend_factory if backend_factory else BackendFactory()
+        self._data_loader_factory = data_loader_factory if data_loader_factory else DataLoaderFactory()
 
-        backend_opts = {}
-        if self._config.num_threads > 0:
-            backend_opts['num_threads'] = self._config.num_threads
-
-        if self._config.use_gpu:
-            backend_opts['use_gpu'] = self._config.use_gpu
-
-            if self._device_id >= 0:
-                backend_opts['device_id'] = self._device_id
-
-        self._backend = get_backend(self._config.framework, backend_opts)
+        self._backend = self._backend_factory.get_backend(self._config, self._device_id)
         self._backend.load(self._model_path)
 
-        self._feeds = FileDataLoader(self._data_path)
+        self._feeds = self._data_loader_factory.get_data_loader(self._config, self._data_path)
 
     def run(self):
         if not self._config.detect_batch_size:
@@ -59,7 +52,7 @@ class Runner(object):
                     self._backend.clear_perf_details()
 
     def _run_with_batch(self, batch_size):
-        benchmarker = Benchmarker(self._config, self._feeds, self._backend, batch_size)
+        benchmarker = MlPerfBenchmarker(self._config, self._feeds, self._backend, batch_size)
         benchmarker.warmup()
         res_benchmark = benchmarker.run()
         logger.info(res_benchmark)

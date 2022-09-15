@@ -17,7 +17,9 @@ class BackendOnnxruntime(Backend):
     def __init__(self, kwargs):
         super(BackendOnnxruntime, self).__init__(kwargs)
         self._device_id = kwargs.get("device_id", None)
+        self._enable_io_binding = kwargs.get("ort_io_binding", False)
         self._user_specified_ep = os.environ.get('ORT_EP')
+        self.io_binding = None
 
     def version(self):
         return rt.__version__
@@ -43,14 +45,29 @@ class BackendOnnxruntime(Backend):
         self.sess = rt.InferenceSession(model_path, sess_options=opt, providers=providers, provider_options=provider_opt)
 
         self._inputs = [meta.name for meta in self.sess.get_inputs()]
-        self._outputs = [meta.name for meta in self.sess.get_outputs()]
         inputs_info = { meta.name: meta.shape for meta in self.sess.get_inputs()}
         logger.info(f"model_inputs:{inputs_info}")
+
+        self._outputs = [meta.name for meta in self.sess.get_outputs()]
+        outputs_info = { meta.name: meta.shape for meta in self.sess.get_outputs()}
+        logger.info(f"model_outputs:{outputs_info}")
         return self
 
     def predict(self, feed):
         """Run the prediction."""
-        return self.sess.run(self._outputs, feed)
+        if self._enable_io_binding:
+            io_binding = self.sess.io_binding()
+            for key, val in feed.items():
+                io_binding.bind_cpu_input(key, val)
+            for output in self._outputs:
+                io_binding.bind_output(output)
+            self.sess.run_with_iobinding(io_binding)
+            #Direct return OrtValue to exclude make output assim ndarray to reduce time
+            #For mlperf accuracy mode, this return value make have some issue
+            #We DO NOT need call copy_outputs_to_cpu here, since our output is binding to 'cpu'
+            return io_binding.get_outputs()
+        else:
+            return self.sess.run(self._outputs, feed)
 
     def _set_session_options(self, sess_opt):
         for k in self._optioins.keys():
