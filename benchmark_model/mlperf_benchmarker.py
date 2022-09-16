@@ -38,26 +38,30 @@ class ScenarioProcessor(ABC):
 
 
 class SingleStreamProcessor(ScenarioProcessor):
-    def __init__(self, process_fn, batch_size, dataset):
+    def __init__(self, process_fn, batch_size, dataset, threads=1, backends_count=1):
         super(SingleStreamProcessor, self).__init__(process_fn, 1, dataset)
+        self._backends_count = backends_count
+        self._backend_selector = 0
 
     def process_batch_query(self, batch_query):
-        self._process_fn(batch_query)
+        self._process_fn(batch_query, self._backend_selector % self._backends_count)
+        self._backend_selector += 1
 
 
 class OfflineProcessor(ScenarioProcessor):
-    def __init__(self, process_fn, batch_size, dataset, threads=2):
+    def __init__(self, process_fn, batch_size, dataset, threads=2, backends_count=1):
         super(OfflineProcessor, self).__init__(process_fn, batch_size, dataset)
         self._batch_query_dispatch_queue = Queue(maxsize=threads * 4)
         self._workers = []
 
-        for _ in range(threads):
-            worker = threading.Thread(target=self._handle_tasks, args=(self._batch_query_dispatch_queue, ))
-            worker.daemon = True
-            self._workers.append(worker)
-            worker.start()
+        for bk_id in range(backends_count):
+            for _ in range(threads):
+                worker = threading.Thread(target=self._handle_tasks, args=(self._batch_query_dispatch_queue, bk_id, ))
+                worker.daemon = True
+                self._workers.append(worker)
+                worker.start()
 
-    def _handle_tasks(self, query_queue):
+    def _handle_tasks(self, query_queue, bk_id):
         """Worker thread."""
         while True:
             batch_query = query_queue.get()
@@ -65,7 +69,7 @@ class OfflineProcessor(ScenarioProcessor):
             if not batch_query:
                 # None in the queue indicates the parent want us to exit
                 break
-            self._process_fn(batch_query)
+            self._process_fn(batch_query, bk_id)
 
     def process_batch_query(self, batch_query):
         self._batch_query_dispatch_queue.put(batch_query)
@@ -77,8 +81,8 @@ SCENARIO_MAPPING = {
 }
 
 class MlPerfBenchmarker(Benchmarker):
-    def __init__(self, config, data_loader, backend, batch_size, metrics_analysis=None):
-        super(MlPerfBenchmarker, self).__init__(config, data_loader, backend, batch_size, metrics_analysis)
+    def __init__(self, config, data_loader, backends, batch_size, metrics_analysis=None):
+        super(MlPerfBenchmarker, self).__init__(config, data_loader, backends, batch_size, metrics_analysis)
         self._mlperf_config = load_json_from_file(self._config.mlperf_config)
         self._ds = FileDataset(data_loader)
         self._post_process = None
@@ -92,7 +96,7 @@ class MlPerfBenchmarker(Benchmarker):
         self._init_mlperf_log_settings(self._mlperf_config["logSettings"])
         self._init_mlperf_test_settings(self._mlperf_config["testSettings"])
 
-        self._scenario_processor = SCENARIO_MAPPING[self._config.mlperf_scenario][0](self._run_one_item, batch_size, self._ds)
+        self._scenario_processor = SCENARIO_MAPPING[self._config.mlperf_scenario][0](self._run_one_item, batch_size, self._ds, self._config.num_runner_threads, len(self._backends))
         self._sut = lg.ConstructSUT(self._issue_queries, self._flush_queries, self._process_latencies)
         self._qsl = lg.ConstructQSL(self._i_total_samples, max(self._ds.get_all_items_count(), 500), self._ds.load_query_samples, self._ds.unload_query_samples)
 
@@ -135,11 +139,11 @@ class MlPerfBenchmarker(Benchmarker):
     def _process_latencies(self, latencies_ns):
         pass
 
-    def _run_one_item(self, qitem):
+    def _run_one_item(self, qitem, bk_id):
         # run the prediction
         processed_results = []
         query_id, content_id, feed = qitem
-        results = self._backend.predict_with_perf(feed)
+        results = self._backends[bk_id].predict_with_perf(feed)
 
         if self._post_process:
             processed_results = self._post_process(results, content_id)
@@ -207,13 +211,6 @@ class MlPerfBenchmarker(Benchmarker):
 
         return res_benchmark
 
-
-    def warmup(self):
-        logger.info(f"Warmup model for {self._config.warmup_times} times")
-        for i in range(self._config.warmup_times):
-            self._backend.predict(self._data_loader.get_batch_items(self._batch_size))
-        logger.info(f"Warmup finished")
-
     def run(self):
         logger.info(f"Start benchmarking as mlperf way, scenario is {self._config.mlperf_scenario}")
         t2_start = perf_counter()
@@ -223,7 +220,7 @@ class MlPerfBenchmarker(Benchmarker):
         lg.DestroySUT(self._sut)
         logger.info(f"Benchmark finished")
 
-        predict_times_in_ms = [ i * 1000 for i in self._backend.predict_times]
+        predict_times_in_ms = [ i * 1000 for i in self._backends[0].predict_times]
 
         res_benchmark = self._parse_mlperf_log()
         res_benchmark['time'] = datetime.datetime.now().strftime("%m/%d/%Y %H:%M")

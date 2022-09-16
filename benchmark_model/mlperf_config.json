@@ -1,6 +1,5 @@
 {
     "userConf": "",
-    "processThreadCount": 2,
     "logSettings": {
         "outputDir": "mlperf_results",
         "copySummaryToStdout": true,

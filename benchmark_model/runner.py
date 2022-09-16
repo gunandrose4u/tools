@@ -15,19 +15,22 @@ from anubis_logger import logger
 #BUILTIN_MODELS = ['bert-squad', 'bart-base', 'xlm-mlm-en-2048', 'ssd-resnet34']
 FRAMEWORK_MAAPING = {"onnxruntime": "onnx", "torch": "torch"}
 MODEL_FILETPYE_MAPPING = {"onnxruntime": [".onnx", ".ort"], "torch": [".bin", ".pytorch"]}
+BENCHMARKER_MAPPING = {"direct": DirectBenchmarker, "mlperf": MlPerfBenchmarker}
 
 
 class Runner(object):
-    def __init__(self, config, data_path, model_path, device_id, backend_factory=None, data_loader_factory=None):
+    def __init__(self, config, data_path, model_path, backend_factory=None, data_loader_factory=None):
         self._config = config
         self._data_path = data_path
         self._model_path = model_path
-        self._device_id = device_id
         self._backend_factory = backend_factory if backend_factory else BackendFactory()
         self._data_loader_factory = data_loader_factory if data_loader_factory else DataLoaderFactory()
 
-        self._backend = self._backend_factory.get_backend(self._config, self._device_id)
-        self._backend.load(self._model_path)
+        self._backends = []
+        for dv_id in self._config.device_ids:
+            backend = self._backend_factory.get_backend(self._config, dv_id)
+            backend.load(self._model_path)
+            self._backends.append(backend)
 
         self._feeds = self._data_loader_factory.get_data_loader(self._config, self._data_path)
 
@@ -52,7 +55,7 @@ class Runner(object):
                     self._backend.clear_perf_details()
 
     def _run_with_batch(self, batch_size):
-        benchmarker = MlPerfBenchmarker(self._config, self._feeds, self._backend, batch_size)
+        benchmarker = BENCHMARKER_MAPPING[self._config.benchmarker](self._config, self._feeds, self._backends, batch_size)
         benchmarker.warmup()
         res_benchmark = benchmarker.run()
         logger.info(res_benchmark)
@@ -87,19 +90,8 @@ def main():
             logger.error(f"Need set model path and data path when benchmark model is not a builtin model")
             return
 
-    runner_threads = []
-    for dv_id in args.device_ids:
-        runner = Runner(args, data_path, model_path, dv_id)
-        for i in range(args.num_runner_threads):
-            t = threading.Thread(target=runner.run)
-            t.daemon = True
-            runner_threads.append(t)
-
-    for t in runner_threads:
-        t.start()
-
-    for t in runner_threads:
-        t.join()
+    runner = Runner(args, data_path, model_path)
+    runner.run()
 
     logger.info("Benchmark done")
 

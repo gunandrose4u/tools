@@ -180,6 +180,15 @@ def parse_arguments():
         help="Mlperf scenario",
     )
 
+    parser.add_argument(
+        "--benchmarker",
+        required=False,
+        type=str,
+        default="direct",
+        choices=["direct", "mlperf"],
+        help="Benchmarker to benchmark",
+    )
+
 
     args = parser.parse_args()
     return args
