@@ -1,3 +1,8 @@
+# """""""""""""""""""""""""""""""""""""""""""
+# Refactor from mlperf-bench project
+# """""""""""""""""""""""""""""""""""""""""""
+
+
 import os
 import re
 import datetime
