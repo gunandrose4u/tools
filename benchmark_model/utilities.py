@@ -168,7 +168,7 @@ def parse_arguments():
         "--mlperf_config",
         required=False,
         type=str,
-        default="",
+        default="mlperf_config.json",
         help="Detail config for run in mlperf benchmarker",
     )
 
@@ -176,6 +176,7 @@ def parse_arguments():
         "--mlperf_scenario",
         required=False,
         type=str,
+        default="SingleStream",
         choices=["SingleStream", "Offline"],
         help="Mlperf scenario",
     )
