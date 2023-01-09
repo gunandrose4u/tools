@@ -10,6 +10,7 @@ FIXED_RANDOM_SEED = 2022
 class Dataset(ABC):
     def __init__(self):
         self._data_x_inmemory = {}
+        self._squeeze = True
         np.random.seed(FIXED_RANDOM_SEED)
 
     @abstractmethod
@@ -29,6 +30,10 @@ class Dataset(ABC):
         raise NotImplementedError()
 
     def make_batch(self, id_list):
+        # Temp solution here. need change
+        if not self._squeeze:
+            return self._data_x_inmemory[id_list[0]]
+
         if isinstance(self._data_x_inmemory[id_list[0]], dict):
             input_names = self._data_x_inmemory[id_list[0]].keys()
             feed = {}
@@ -52,6 +57,13 @@ class FileDataset(Dataset):
         for sample in sample_list:
             self._data_x_inmemory[sample] = \
                 self._file_data_loader.get_item_loc(sample % self._file_data_loader.loaded_count)
+
+        if len(sample_list) > 0:
+            for name in self._data_x_inmemory[sample].keys():
+                try:
+                    np.squeeze(self._data_x_inmemory[sample][name], axis=0)
+                except:
+                    self._squeeze = False
 
     def unload_query_samples(self, sample_list):
         self._data_x_inmemory = {}
