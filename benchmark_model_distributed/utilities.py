@@ -6,6 +6,43 @@ from anubis_logger import logger
 
 DEFAULT_METRICS_CSV_FILE = "metrics.csv"
 
+def run_config_validation(run_config):
+    if run_config.test_times < 1:
+        raise ValueError("test_times must be greater than 0")
+
+    if run_config.backend_nums < 1:
+        raise ValueError("backend_nums must be greater than 0")
+
+    if run_config.batch_size < 1:
+        raise ValueError("batch_size must be greater than 0")
+
+    if run_config.num_runner_threads < 1:
+        raise ValueError("num_runner_threads must be greater than 0")
+
+    if run_config.warmup_times < 0:
+        raise ValueError("warmup_times must be greater than or equal to 0")
+
+    if run_config.seq_len < 1:
+        raise ValueError("seq_len must be greater than 0")
+
+    if run_config.max_tokens < 1:
+        raise ValueError("max_tokens must be greater than 0")
+
+    if run_config.max_new_tokens < 1:
+        raise ValueError("max_new_tokens must be greater than 0")
+
+    if run_config.max_new_tokens > run_config.max_tokens:
+        raise ValueError("max_new_tokens must be less than or equal to max_tokens")
+
+    if run_config.num_beams < 1:
+        raise ValueError("num_beams must be greater than 0")
+
+    if run_config.model == "t5-3b":
+        run_config.padding_side = "left"
+
+    if run_config.model == "EleutherAI/gpt-j-6B":
+        run_config.pad_token_id = 50256
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
 
@@ -14,8 +51,9 @@ def parse_arguments():
         "--model",
         required=False,
         type=str,
-        default="decapoda-research/llama-7b-hf",
-        help="Model for benchmark",
+        default="facebook/opt-1.3b",
+        choices=["facebook/opt-1.3b", "t5-3b", "EleutherAI/gpt-j-6B", "decapoda-research/llama-7b-hf", "decapoda-research/llama-13b-hf"],
+        help="Model for benchmark, currently only support HuggingFace models",
     )
 
     parser.add_argument(
@@ -24,7 +62,7 @@ def parse_arguments():
         required=False,
         default="pt_hf_nlp_distributed",
         type=str,
-        help="Backend to benchmark",
+        help="Backend to benchmark, builtin backend is pt_hf_nlp_distributed. If you want benchmark model not supported yet, you just need implement your backend, put it under backends folder and pass the backend name here.",
     )
 
     parser.add_argument(
@@ -33,7 +71,7 @@ def parse_arguments():
         required=False,
         type=str,
         default="pt_hf_nlp",
-        help="Dataloader to generate for benchmark",
+        help="Dataloader to generate for benchmark, builtin dataloader is pt_hf_nlp. If you want benchmark model not supported yet, you just need implement your dataloader, put it under dataloaders folder and pass the dataloader name here.",
     )
 
     parser.add_argument(
@@ -93,7 +131,7 @@ def parse_arguments():
         required=False,
         default=-1,
         type=int,
-        help="Seq length of text for inference",
+        help="Token length for inference",
     )
 
     parser.add_argument(
@@ -102,7 +140,7 @@ def parse_arguments():
         default="float16",
         type=str,
         choices=["float32", "float16", "bfloat16"],
-        help="data-type"
+        help="data-type for model to run",
     )
 
     parser.add_argument(
@@ -125,7 +163,7 @@ def parse_arguments():
     parser.add_argument(
         "--max_tokens",
         required=False,
-        default=1024,
+        default=8200,
         type=int,
         help="maximum tokens used for the text-generation KV-cache"
     )
@@ -133,7 +171,7 @@ def parse_arguments():
     parser.add_argument(
         "--max_new_tokens",
         required=False,
-        default=50,
+        default=32,
         type=int,
         help="maximum new tokens to generate"
     )
@@ -142,7 +180,7 @@ def parse_arguments():
         "--use_kernel",
         required=False,
         action='store_true',
-        help="enable kernel-injection"
+        help="enable kernel-injection for deepspeed"
     )
 
     parser.add_argument(
@@ -156,8 +194,9 @@ def parse_arguments():
         "--num_beams",
         required=False,
         default=1,
+        choices=[1, 4],
         type=int,
-        help="beam search generation mode"
+        help="beam search generation mode, set number of beams to search"
     )
 
     parser.add_argument(
@@ -171,7 +210,7 @@ def parse_arguments():
         "--benchmarker",
         required=False,
         type=str,
-        default="direct",
+        default="nlp_generative",
         choices=["direct", "nlp_generative"],
         help="Benchmarker to benchmark",
     )
@@ -179,7 +218,7 @@ def parse_arguments():
     parser.add_argument(
         "--warmup_times",
         required=False,
-        default=5,
+        default=3,
         type=int,
         help="Warmup times before calculate metrics of model",
     )
@@ -195,10 +234,21 @@ def parse_arguments():
         "--local_rank",
         type=int,
         default=-1,
-        help="local rank"
+        help="""Please do not set this param, it is a dummy param.
+        It is auto set when lunching runner.py by distributed launcher
+        like torchrun, deepspeed, mpi, etc.
+        When running in distributed mode, get local_rank from env vars."""
+    )
+
+    parser.add_argument(
+        "--token_record",
+        required=False,
+        action='store_true',
+        help="set True will record token-level latency for each inference in stopping criteria of HF generation method"
     )
 
     args = parser.parse_args()
+    run_config_validation(args)
     return args
 
 def save_dict_to_csv(input_dict, csv_path=DEFAULT_METRICS_CSV_FILE):
@@ -216,7 +266,7 @@ def save_dict_to_csv(input_dict, csv_path=DEFAULT_METRICS_CSV_FILE):
 def load_json_from_file(path):
     with open(path, 'r') as f:
         return json.load(f)
-    
+
 def print_dict(title, input_dict):
     logger.info(f"{title}:")
     for k, v in input_dict.items():

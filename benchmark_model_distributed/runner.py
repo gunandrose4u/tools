@@ -35,21 +35,19 @@ class Runner(object):
         benchmarker = BENCHMARKER_MAPPING[self._run_config.benchmarker](self._run_config, self._data_loader, self._backends, self._run_config.batch_size)
         benchmarker.warmup()
         res_benchmark = benchmarker.run()
-        print_dict("Benchmark result", res_benchmark)
-        res_benchmark.update(self._run_config.__dict__)
-        save_dict_to_csv(res_benchmark, self._run_config.result_csv)
+        if not self._run_config.distributed or self._run_config.local_rank == 0:
+            print_dict("Benchmark result", res_benchmark)
+            res_benchmark.update(self._run_config.__dict__)
+            save_dict_to_csv(res_benchmark, self._run_config.result_csv)
 
 def main():
     run_config = parse_arguments()
 
     local_rank = int(os.environ.get('LOCAL_RANK', -1))
     world_size = int(os.environ.get('WORLD_SIZE', -1))
-    if local_rank != -1 and world_size != -1:
-        run_config.local_rank = local_rank
-        run_config.world_size = world_size
-        run_config.distributed = True
-    else:
-        run_config.distributed = False
+    run_config.local_rank = local_rank
+    run_config.world_size = world_size
+    run_config.distributed = local_rank != -1 and world_size != -1
 
     print_dict("Run config", run_config.__dict__)
 

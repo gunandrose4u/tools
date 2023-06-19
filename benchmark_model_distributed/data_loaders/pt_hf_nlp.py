@@ -1,4 +1,6 @@
 import math
+import torch
+import numpy as np
 
 from data_loader import DataLoader
 from transformers import AutoTokenizer, LlamaTokenizer
@@ -40,37 +42,54 @@ class BenchmarkDataLoader(DataLoader):
         if run_config.model in LLAMA_MODEL_NAMES:
             self._tokenizer = LlamaTokenizer.from_pretrained(run_config.model, padding_side=run_config.padding_side)
             self._tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        elif run_config.model == 't5-3b':
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                run_config.model, 
+                padding_side=run_config.padding_side,
+                model_max_length = 8200)
+            self._tokenizer.pad_token = self._tokenizer.eos_token
         else:
             self._tokenizer = AutoTokenizer.from_pretrained(run_config.model, padding_side=run_config.padding_side)
             self._tokenizer.pad_token = self._tokenizer.eos_token
 
+        input_sentences = INPUTS
+        if run_config.batch_size > len(INPUTS):
+            input_sentences *= math.ceil(run_config.batch_size / len(input_sentences))
+
         self._loaded_data_x = []
         if run_config.seq_len > 1:
-            for sentence in INPUTS:
-                rough_words = sentence.split(' ')
-                rough_words = rough_words * math.ceil(run_config.seq_len / len(rough_words))
-                new_sentence = ' '.join(rough_words[:run_config.seq_len])
-                self._loaded_data_x.append(new_sentence)
+            batch_inputs = {}
+            for sen in input_sentences[:run_config.batch_size]:
+                token = self._tokenizer(sen, return_tensors="pt")
+                for k in token:
+                    rp_times = math.ceil(run_config.seq_len / len(token[k][0]))
+                    new_token = token[k][0].repeat((1, rp_times))
+                    new_token = torch.tensor(new_token[0].numpy()[:run_config.seq_len]).reshape(1, run_config.seq_len)
+                    if k not in batch_inputs:
+                        batch_inputs[k] = new_token
+                    else:
+                        batch_inputs[k] = torch.cat((batch_inputs[k], new_token), dim=0)
+            self._loaded_data_x.append(batch_inputs)
         else:
-            self._loaded_data_x = INPUTS
+            tokens = self._tokenizer.batch_encode_plus(
+                input_sentences[:run_config.batch_size], 
+                return_tensors="pt", 
+                padding=True)
+            self._loaded_data_x.append(tokens)
+        
+        for k in self._loaded_data_x[0]:
+            logger.info(F"Input data shape: {k}={self._loaded_data_x[0][k].shape}")
 
         if run_config.verbose:
-            logger.info("Loaded data: ")
-            for d in self._loaded_data_x:
-                logger.info(d)
-                logger.info(len(d.split(' ')))
+            logger.info(F"Input data: {batch_inputs}")
 
-
+    
+    # ignore batch_size here, when init data, we create batch of data in one item
     def get_batch_items(self, batch_size=1):
-        input_sentences = self._loaded_data_x
-        if batch_size > len(INPUTS):
-            input_sentences *= math.ceil(batch_size / len(input_sentences))
-
-        return  self._tokenizer.batch_encode_plus(input_sentences[:batch_size], return_tensors="pt", padding=True)
+        return self._loaded_data_x[0]
 
     def post_process(self, results):
         if self._run_config.verbose:
+            logger.info(F"Output data shape: {results.shape}")
             decoded = self._tokenizer.batch_decode(results, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-            for i in range(len(decoded)):
-                logger.info(decoded[i])
-                logger.info(len(decoded[i]))
+            logger.info(F"Output decoded data: {decoded}")
