@@ -52,7 +52,7 @@ def parse_arguments():
         required=False,
         type=str,
         default="facebook/opt-1.3b",
-        choices=["facebook/opt-1.3b", "t5-3b", "EleutherAI/gpt-j-6B", "decapoda-research/llama-7b-hf", "decapoda-research/llama-13b-hf"],
+        choices=["facebook/opt-1.3b", "t5-3b", "EleutherAI/gpt-j-6B", "decapoda-research/llama-7b-hf", "decapoda-research/llama-13b-hf", "bigscience/bloom-7b1"],
         help="Model for benchmark, currently only support HuggingFace models",
     )
 
@@ -185,6 +185,13 @@ def parse_arguments():
 
     parser.add_argument(
         "--greedy",
+        required=False,
+        action='store_true',
+        help="greedy generation mode, it will override do_sample=False and num_beams=1"
+    )
+
+    parser.add_argument(
+        "--do_sample",
         required=False,
         action='store_true',
         help="greedy generation mode"

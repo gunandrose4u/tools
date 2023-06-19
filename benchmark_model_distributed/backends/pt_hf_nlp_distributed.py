@@ -22,6 +22,7 @@ class TokenTimestampRecoder(StoppingCriteria):
         super().__init__()
         self.timestamps = []
 
+    # when framework is calling this function, it means the token is generated, but the tensor is on GPU
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, stops=[]):
         token_time = perf_counter()
         self.timestamps.append(token_time)
@@ -123,7 +124,7 @@ class BenchmarkBackend(TorchDistributedBackend):
             self._generate_kwargs["do_sample"] = False
             self._generate_kwargs["num_beams"] = 1
         else:
-            self._generate_kwargs["do_sample"] = True
+            self._generate_kwargs["do_sample"] = self._run_config.do_sample
             self._generate_kwargs["num_beams"] = self._run_config.num_beams
 
         if self._run_config.token_record:
