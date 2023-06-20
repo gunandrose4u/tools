@@ -1,10 +1,16 @@
 import argparse
+import pathlib
 import os
 import json
 
 from anubis_logger import logger
+from supported_models import SUPPORTED_MODELS
 
 DEFAULT_METRICS_CSV_FILE = "metrics.csv"
+
+def list_built_in_modules(path_to_modules, exclude_modules=[]):
+    return [item for item in os.listdir(path_to_modules)
+            if not os.path.isdir(os.path.join(path_to_modules, item)) and item.endswith(".py") and item != "__init__.py" and item not in exclude_modules]
 
 def run_config_validation(run_config):
     if run_config.test_times < 1:
@@ -43,16 +49,28 @@ def run_config_validation(run_config):
     if run_config.model == "EleutherAI/gpt-j-6B":
         run_config.pad_token_id = 50256
 
+    if not run_config.backend_name:
+        run_config.backend_name = SUPPORTED_MODELS[run_config.model][0]
+
+    if not run_config.dataloader:
+        run_config.dataloader = SUPPORTED_MODELS[run_config.model][1]
+
+    if not run_config.benchmarker:
+        run_config.benchmarker = SUPPORTED_MODELS[run_config.model][2]
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
+
+    curdir = pathlib.Path(__file__).parent.resolve()
+    BUILTIN_BACKENDS = list_built_in_modules(os.path.join(curdir, 'backends'), exclude_modules=['backend.py'])
+    BUILTIN_DATALOADERS = list_built_in_modules(os.path.join(curdir, 'data_loaders'), exclude_modules=['data_loader.py'])
 
     parser.add_argument(
         "-m",
         "--model",
-        required=False,
+        required=True,
         type=str,
-        default="facebook/opt-1.3b",
-        choices=["facebook/opt-1.3b", "t5-3b", "EleutherAI/gpt-j-6B", "decapoda-research/llama-7b-hf", "decapoda-research/llama-13b-hf", "bigscience/bloom-7b1"],
+        choices=SUPPORTED_MODELS.keys(),
         help="Model for benchmark, currently only support HuggingFace models",
     )
 
@@ -60,9 +78,11 @@ def parse_arguments():
         "-bk",
         "--backend_name",
         required=False,
-        default="pt_hf_nlp_distributed",
+        choices=BUILTIN_BACKENDS,
         type=str,
-        help="Backend to benchmark, builtin backend is pt_hf_nlp_distributed. If you want benchmark model not supported yet, you just need implement your backend, put it under backends folder and pass the backend name here.",
+        help="""Backend to benchmark, builtin backend is pt_hf_nlp_distributed.
+        If you want benchmark model not supported yet, you just need implement
+        your backend, put it under backends folder and pass the backend name here.""",
     )
 
     parser.add_argument(
@@ -70,8 +90,10 @@ def parse_arguments():
         "--dataloader",
         required=False,
         type=str,
-        default="pt_hf_nlp",
-        help="Dataloader to generate for benchmark, builtin dataloader is pt_hf_nlp. If you want benchmark model not supported yet, you just need implement your dataloader, put it under dataloaders folder and pass the dataloader name here.",
+        choices=BUILTIN_DATALOADERS,
+        help="""Dataloader to generate for benchmark, builtin dataloader is pt_hf_nlp.
+        If you want benchmark model not supported yet, you just need implement your
+        dataloader, put it under dataloaders folder and pass the dataloader name here.""",
     )
 
     parser.add_argument(
@@ -217,7 +239,6 @@ def parse_arguments():
         "--benchmarker",
         required=False,
         type=str,
-        default="nlp_generative",
         choices=["direct", "nlp_generative"],
         help="Benchmarker to benchmark",
     )

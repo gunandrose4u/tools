@@ -12,7 +12,7 @@ class Benchmarker(ABC):
         self._backends = backends
         self._metrics_analysis = metrics_analysis
         self._run_config = run_config
-        self._batch_size = batch_size if batch_size and batch_size > 1 else 1
+        self._batch_size = batch_size
 
         self._test_times = self._run_config.test_times
 
@@ -37,7 +37,7 @@ class DirectBenchmarker(Benchmarker):
         logger.info(f"Start benchmarking {self._run_config.model} with {len(self._backends)} backends")
         runner_threads = []
         for bk_id in range(len(self._backends)):
-            for i in range(self._run_config.num_runner_threads):
+            for _ in range(self._run_config.num_runner_threads):
                 t = threading.Thread(target=self._benchmark_with_backend, args=(bk_id, ))
                 t.daemon = True
                 runner_threads.append(t)

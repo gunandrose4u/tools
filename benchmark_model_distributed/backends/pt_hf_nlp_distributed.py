@@ -98,7 +98,7 @@ class BenchmarkBackend(TorchDistributedBackend):
                 **self._generate_kwargs,
                 )
 
-            return outputs
+            return outputs.to('cpu').numpy()
 
     def predict_with_perf(self, input_tokens):
         self._token_timestamp_recoder.timestamps.clear()
