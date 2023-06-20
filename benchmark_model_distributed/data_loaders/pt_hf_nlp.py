@@ -34,7 +34,7 @@ INPUTS = [
 ]
 
 # LLAMA tokenizer has a bug, can not load by AutoTokenizer. And LlamaTokenizer batch token will lead inference failure.
-LLAMA_MODEL_NAMES = ['decapoda-research/llama-7b-hf', 'decapoda-research/llama-13b-hf']
+LLAMA_MODEL_NAMES = ['decapoda-research/llama-7b-hf', 'decapoda-research/llama-13b-hf', "decapoda-research/llama-30b-hf", "decapoda-research/llama-65b-hf"]
 
 class BenchmarkDataLoader(DataLoader):
     def __init__(self, run_config):
@@ -44,7 +44,7 @@ class BenchmarkDataLoader(DataLoader):
             self._tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         elif run_config.model == 't5-3b':
             self._tokenizer = AutoTokenizer.from_pretrained(
-                run_config.model, 
+                run_config.model,
                 padding_side=run_config.padding_side,
                 model_max_length = 8200)
             self._tokenizer.pad_token = self._tokenizer.eos_token
@@ -72,18 +72,18 @@ class BenchmarkDataLoader(DataLoader):
             self._loaded_data_x.append(batch_inputs)
         else:
             tokens = self._tokenizer.batch_encode_plus(
-                input_sentences[:run_config.batch_size], 
-                return_tensors="pt", 
+                input_sentences[:run_config.batch_size],
+                return_tensors="pt",
                 padding=True)
             self._loaded_data_x.append(tokens)
-        
+
         for k in self._loaded_data_x[0]:
             logger.info(F"Input data shape: {k}={self._loaded_data_x[0][k].shape}")
 
         if run_config.verbose:
             logger.info(F"Input data: {batch_inputs}")
 
-    
+
     # ignore batch_size here, when init data, we create batch of data in one item
     def get_batch_items(self, batch_size=1):
         return self._loaded_data_x[0]
