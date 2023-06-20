@@ -1,4 +1,4 @@
-PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG = ["pt_hf_nlp_distributed", "pt_hf_nlp", "pt_hf_nlp_distributed"]
+PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG = ["pt_hf_nlp_distributed", "pt_hf_nlp", "nlp_generative"]
 
 SUPPORTED_MODELS = {
     "facebook/opt-1.3b": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
