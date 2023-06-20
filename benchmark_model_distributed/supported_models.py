@@ -6,5 +6,8 @@ SUPPORTED_MODELS = {
     "EleutherAI/gpt-j-6B": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
     "decapoda-research/llama-7b-hf": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
     "decapoda-research/llama-13b-hf": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
+    "decapoda-research/llama-30b-hf": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
+    "decapoda-research/llama-65b-hf": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
     "bigscience/bloom-7b1": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
+    "bigscience/bloom": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
 }
