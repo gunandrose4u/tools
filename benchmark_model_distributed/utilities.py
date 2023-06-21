@@ -32,7 +32,7 @@ def run_config_validation(run_config):
         raise ValueError("max_new_tokens must be greater than 0")
 
     if run_config.max_new_tokens + run_config.seq_len > run_config.max_tokens:
-        raise ValueError("max_new_tokens must be less than or equal to max_tokens + seq_len")
+        raise ValueError("max_new_tokens must be less than or equal to max_tokens - seq_len")
 
     if run_config.num_beams < 1:
         raise ValueError("num_beams must be greater than 0")
