@@ -11,43 +11,44 @@ class NlpGenerativeBenchmarker(DirectBenchmarker):
     def run(self):
         res_benchmark = super().run()
 
-        prompt_predict_times = []
+        query_predict_times = []
         for bk in self._backends:
-            prompt_predict_times.extend(bk.predict_times)
+            query_predict_times.extend(bk.predict_times)
 
-        token_predict_times = []
+        token_predict_times_from_token_recoder = []
         for bk in self._backends:
-            token_predict_times.extend(bk.token_predict_times)
+            token_predict_times_from_token_recoder.extend(bk.token_predict_times)
 
-        first_token_predict_times = []
-        non_first_token_predict_times = []
-        for t_times in token_predict_times:
+        prompt_phase_predict_times = []
+        token_phase_predict_times_from_token_recoder = []
+        for t_times in token_predict_times_from_token_recoder:
             num_new_tokens = len(t_times)
             if num_new_tokens > 0:
-                first_token_predict_times.append(t_times[0])
+                prompt_phase_predict_times.append(t_times[0])
             
             if num_new_tokens > 1:
-                non_first_token_predict_times.extend(t_times[1:])
+                token_phase_predict_times_from_token_recoder.extend(t_times[1:])
 
         if self._run_config.token_metrics:
-            prompt_predict_times_exclude_1st_token = []
-            for i in range(len(prompt_predict_times)):
-                prompt_predict_times_exclude_1st_token.append(prompt_predict_times[i] - first_token_predict_times[i])
-            self._get_percentile_metrics(res_benchmark, prompt_predict_times_exclude_1st_token, 'prompt_latency_exclude_1st_token_')
+            self._get_percentile_metrics(res_benchmark, prompt_phase_predict_times, 'prompt_phase_latency_')
+            
+            token_phase_predict_times = []
+            for i in range(len(query_predict_times)):
+                token_phase_predict_times.append(query_predict_times[i] - prompt_phase_predict_times[i])
+            self._get_percentile_metrics(res_benchmark, token_phase_predict_times, 'token_phase_latency_')
             
             if not self._run_config.verbose:
-                logger.info(f"prompt_predict_times\n{prompt_predict_times}")
-                logger.info(f"token_predict_times\n{token_predict_times}")
-                logger.info(f"first_token_predict_times\n{first_token_predict_times}")
-                logger.info(f"prompt_predict_times_exclude_1st_token\n{prompt_predict_times_exclude_1st_token}")
-                logger.info(f"non_first_token_predict_times\n{non_first_token_predict_times}")
+                logger.info(f"query_predict_times\n{query_predict_times}")
+                logger.info(f"prompt_phase_predict_times\n{prompt_phase_predict_times}")
+                logger.info(f"token_phase_predict_times\n{token_phase_predict_times}")
+                logger.info(f"token_predict_times_from_token_recoder\n{token_predict_times_from_token_recoder}")
+                logger.info(f"token_phase_predict_times_from_token_recoder\n{token_phase_predict_times_from_token_recoder}")
 
-            self._get_percentile_metrics(res_benchmark, first_token_predict_times, '1st_token_latency_')
-            if non_first_token_predict_times:
-                self._get_percentile_metrics(res_benchmark, non_first_token_predict_times, 'non_1st_token_latency_')
-                res_benchmark["p_token/s"] = 1 / np.mean(non_first_token_predict_times)
+            if token_phase_predict_times_from_token_recoder:
+                self._get_percentile_metrics(res_benchmark, token_phase_predict_times_from_token_recoder, 'r_token_phase_latency_')
+                res_benchmark["r_token/s"] = 1 / np.mean(token_phase_predict_times_from_token_recoder)
             
-            res_benchmark["token/s"] = (self._run_config.max_new_tokens - 1) / np.mean(prompt_predict_times_exclude_1st_token)
+            res_benchmark["token/s"] = (self._run_config.max_new_tokens - 1) / np.mean(token_phase_predict_times)
 
             
         return res_benchmark

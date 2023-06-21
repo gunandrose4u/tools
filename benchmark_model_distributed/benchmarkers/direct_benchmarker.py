@@ -33,13 +33,9 @@ class DirectBenchmarker(Benchmarker):
         res_benchmark = {}
         res_benchmark['time'] = datetime.datetime.now().strftime("%m/%d/%Y %H:%M")
         res_benchmark['model'] = self._run_config.model
-        self._get_percentile_metrics(res_benchmark, predict_times)
-        res_benchmark['batch_size'] = self._batch_size
         res_benchmark['framework'] = f"{self._backends[0].name()}+{self._backends[0].version()}"
-        res_benchmark['test_times'] = self._test_times
-        res_benchmark['warmup_times'] = self._run_config.warmup_times
-        res_benchmark['num_threads'] = self._run_config.num_threads
         res_benchmark['duration'] = self._benchmark_end - self._benchmark_start
+        self._get_percentile_metrics(res_benchmark, predict_times, "query_latency_")
 
         return res_benchmark
 

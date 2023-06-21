@@ -25,8 +25,8 @@ class MultiBackendsRunner(object):
         benchmarker.warmup()
         res_benchmark = benchmarker.run()
         if not self._run_config.distributed or self._run_config.local_rank == 0:
-            print_dict("Benchmark result", res_benchmark)
             res_benchmark.update(self._run_config.__dict__)
+            print_dict("Benchmark result", res_benchmark)
             save_dict_to_csv(res_benchmark, self._run_config.result_csv)
 
 class Runner(MultiBackendsRunner):
