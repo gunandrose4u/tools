@@ -34,7 +34,12 @@ INPUTS = [
 ]
 
 # LLAMA tokenizer has a bug, can not load by AutoTokenizer. And LlamaTokenizer batch token will lead inference failure.
-LLAMA_MODEL_NAMES = ['decapoda-research/llama-7b-hf', 'decapoda-research/llama-13b-hf', "decapoda-research/llama-30b-hf", "decapoda-research/llama-65b-hf"]
+LLAMA_MODEL_NAMES = [
+    'decapoda-research/llama-7b-hf',
+    'decapoda-research/llama-13b-hf',
+    "decapoda-research/llama-30b-hf",
+    "decapoda-research/llama-65b-hf"
+]
 
 class BenchmarkDataLoader(DataLoader):
     def __init__(self, run_config):
@@ -57,6 +62,7 @@ class BenchmarkDataLoader(DataLoader):
             input_sentences *= math.ceil(run_config.batch_size / len(input_sentences))
 
         self._loaded_data_x = []
+        one_data_item = None
         if run_config.seq_len > 1:
             batch_inputs = {}
             for sen in input_sentences[:run_config.batch_size]:
@@ -69,13 +75,16 @@ class BenchmarkDataLoader(DataLoader):
                         batch_inputs[k] = new_token
                     else:
                         batch_inputs[k] = torch.cat((batch_inputs[k], new_token), dim=0)
-            self._loaded_data_x.append(batch_inputs)
+            one_data_item = batch_inputs
         else:
             tokens = self._tokenizer.batch_encode_plus(
                 input_sentences[:run_config.batch_size],
                 return_tensors="pt",
                 padding=True)
-            self._loaded_data_x.append(tokens)
+            one_data_item = tokens
+
+        for _ in range(run_config.total_sample_count):
+            self._loaded_data_x.append(one_data_item)
 
         for k in self._loaded_data_x[0]:
             logger.info(F"Input data shape: {k}={self._loaded_data_x[0][k].shape}")
@@ -83,10 +92,11 @@ class BenchmarkDataLoader(DataLoader):
         if run_config.verbose:
             logger.info(F"Input data: {batch_inputs}")
 
+        np.random.seed(20230621)
 
     # ignore batch_size here, when init data, we create batch of data in one item
     def get_batch_items(self, batch_size=1):
-        return self._loaded_data_x[0]
+        return self.get_item_loc(np.random.randint(len(self._loaded_data_x)))
 
     def post_process(self, results):
         if self._run_config.verbose:

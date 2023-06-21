@@ -1,30 +1,19 @@
 import os
-import sys
-import traceback
-import pathlib
-import numpy as np
-import threading
 
 from utilities import parse_arguments, save_dict_to_csv, print_dict
 from backends.backend import BackendFactory
 from data_loaders.data_loader import DataLoaderFactory
-from benchmarkers.benchmarker import DirectBenchmarker
-from benchmarkers.nlp_generative_benchmarker import NlpGenerativeBenchmarker
 from anubis_logger import logger
+from supported_models import BENCHMARKER_MAPPING
 
-BENCHMARKER_MAPPING = {
-    "direct": DirectBenchmarker,
-    "nlp_generative": NlpGenerativeBenchmarker,
-}
-
-class Runner(object):
-    def __init__(self, run_config):
+class MultiBackendsRunner(object):
+    def __init__(self, run_config, backend_nums=1):
         self._run_config = run_config
         self._backend_factory = BackendFactory()
         self._data_loader_factory = DataLoaderFactory()
-
         self._backends = []
-        for _ in range(self._run_config.backend_nums):
+
+        for _ in range(backend_nums):
             backend = self._backend_factory.get_backend(self._run_config)
             backend.load_model()
             self._backends.append(backend)
@@ -39,6 +28,10 @@ class Runner(object):
             print_dict("Benchmark result", res_benchmark)
             res_benchmark.update(self._run_config.__dict__)
             save_dict_to_csv(res_benchmark, self._run_config.result_csv)
+
+class Runner(MultiBackendsRunner):
+    def __init__(self, run_config):
+        super().__init__(run_config, backend_nums=1)
 
 def main():
     run_config = parse_arguments()

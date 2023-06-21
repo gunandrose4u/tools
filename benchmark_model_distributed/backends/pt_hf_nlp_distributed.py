@@ -1,4 +1,5 @@
 
+import os
 import torch
 import deepspeed
 
@@ -17,13 +18,30 @@ CUSTOMIZED_CAUSAL_LM_MODELS = {
 
 torch.manual_seed(20231212)
 
+class FirstTokenTimestampRecoder(StoppingCriteria):
+    def __init__(self):
+        super().__init__()
+        self.timestamps = []
+
+    # when framework is calling this function, it means the token is generated, but the tensor is on GPU
+    # The last generated token will not be recorded
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, stops=[]):
+        if len(self.timestamps) == 0:
+            input_ids.to('cpu').numpy()
+            token_time = perf_counter()
+            self.timestamps.append(token_time)
+        return False
+    
 class TokenTimestampRecoder(StoppingCriteria):
     def __init__(self):
         super().__init__()
         self.timestamps = []
 
     # when framework is calling this function, it means the token is generated, but the tensor is on GPU
+    # The last generated token will not be recorded
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, stops=[]):
+        if len(self.timestamps) == 0:
+            input_ids.to('cpu').numpy()
         token_time = perf_counter()
         self.timestamps.append(token_time)
         return False
@@ -32,7 +50,12 @@ class BenchmarkBackend(TorchDistributedBackend):
     def __init__(self, run_config):
         super(BenchmarkBackend, self).__init__(run_config)
         self._model_name = run_config.model
-        self._token_timestamp_recoder = TokenTimestampRecoder()
+        record_all_tokens =  os.getenv("RECORD_ALL_TOKENS", None)
+        if record_all_tokens:
+            self._token_timestamp_recoder = TokenTimestampRecoder()
+        else:
+            self._token_timestamp_recoder = FirstTokenTimestampRecoder()
+        
         self.token_timestamps = []
 
         self._device = torch.device(f"cuda:{run_config.local_rank}") if run_config.distributed else torch.device('cuda:0')
@@ -103,7 +126,7 @@ class BenchmarkBackend(TorchDistributedBackend):
     def predict_with_perf(self, input_tokens):
         self._token_timestamp_recoder.timestamps.clear()
         res = super().predict_with_perf(input_tokens)
-        if self._run_config.token_record:
+        if self._run_config.token_metrics:
             token_generate_time = [t - self.start_predict_time for t in self._token_timestamp_recoder.timestamps]
             for i in reversed(range(1, len(token_generate_time))):
                 token_generate_time[i] = token_generate_time[i] - token_generate_time[i - 1]
@@ -127,7 +150,7 @@ class BenchmarkBackend(TorchDistributedBackend):
             self._generate_kwargs["do_sample"] = self._run_config.do_sample
             self._generate_kwargs["num_beams"] = self._run_config.num_beams
 
-        if self._run_config.token_record:
+        if self._run_config.token_metrics:
             self._generate_kwargs["stopping_criteria"] = StoppingCriteriaList([self._token_timestamp_recoder])
 
         print_dict("Huggingface text generation configs used", self._generate_kwargs)

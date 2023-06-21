@@ -16,14 +16,8 @@ def run_config_validation(run_config):
     if run_config.test_times < 1:
         raise ValueError("test_times must be greater than 0")
 
-    if run_config.backend_nums < 1:
-        raise ValueError("backend_nums must be greater than 0")
-
     if run_config.batch_size < 1:
         raise ValueError("batch_size must be greater than 0")
-
-    if run_config.num_runner_threads < 1:
-        raise ValueError("num_runner_threads must be greater than 0")
 
     if run_config.warmup_times < 0:
         raise ValueError("warmup_times must be greater than or equal to 0")
@@ -37,8 +31,8 @@ def run_config_validation(run_config):
     if run_config.max_new_tokens < 1:
         raise ValueError("max_new_tokens must be greater than 0")
 
-    if run_config.max_new_tokens > run_config.max_tokens:
-        raise ValueError("max_new_tokens must be less than or equal to max_tokens")
+    if run_config.max_new_tokens + run_config.seq_len > run_config.max_tokens:
+        raise ValueError("max_new_tokens must be less than or equal to max_tokens + seq_len")
 
     if run_config.num_beams < 1:
         raise ValueError("num_beams must be greater than 0")
@@ -110,7 +104,7 @@ def parse_arguments():
         required=False,
         default=10,
         type=int,
-        help="Number of repeat times to get average inference latency.",
+        help="Number of repeat times to predict with model to get benchmark metrics.",
     )
 
     parser.add_argument(
@@ -119,23 +113,7 @@ def parse_arguments():
         required=False,
         type=int,
         default=-1,
-        help="Threads to use for framework",
-    )
-
-    parser.add_argument(
-        "--num_runner_threads",
-        required=False,
-        type=int,
-        default=1,
-        help="Threads to use for inference on each backend",
-    )
-
-    parser.add_argument(
-        "--backend_nums",
-        required=False,
-        type=int,
-        default=1,
-        help="Number of backends for inference",
+        help="Number of threads to use for framework",
     )
 
     parser.add_argument(
@@ -269,10 +247,20 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--token_record",
+        "--token_metrics",
         required=False,
         action='store_true',
-        help="set True will record token-level latency for each inference in stopping criteria of HF generation method"
+        help="""set True will record token-level latency for each inference 
+        in stopping criteria of HF generation method"""
+    )
+
+    parser.add_argument(
+        "--total_sample_count",
+        required=False,
+        default=10,
+        type=int,
+        help="""total count of input dataset for benchmarking, each time 
+        benchmark will randomly select one data from the whole dataset""",
     )
 
     args = parser.parse_args()

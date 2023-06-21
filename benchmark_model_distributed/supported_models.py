@@ -1,3 +1,12 @@
+
+from benchmarkers.direct_benchmarker import DirectBenchmarker
+from benchmarkers.nlp_generative_benchmarker import NlpGenerativeBenchmarker
+
+BENCHMARKER_MAPPING = {
+    "direct": DirectBenchmarker,
+    "nlp_generative": NlpGenerativeBenchmarker,
+}
+
 PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG = ["pt_hf_nlp_distributed", "pt_hf_nlp", "nlp_generative"]
 
 SUPPORTED_MODELS = {
