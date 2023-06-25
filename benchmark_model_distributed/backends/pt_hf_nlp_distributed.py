@@ -31,7 +31,7 @@ class FirstTokenTimestampRecoder(StoppingCriteria):
             token_time = perf_counter()
             self.timestamps.append(token_time)
         return False
-    
+
 class TokenTimestampRecoder(StoppingCriteria):
     def __init__(self):
         super().__init__()
@@ -55,7 +55,7 @@ class BenchmarkBackend(TorchDistributedBackend):
             self._token_timestamp_recoder = TokenTimestampRecoder()
         else:
             self._token_timestamp_recoder = FirstTokenTimestampRecoder()
-        
+
         self.token_timestamps = []
 
         self._device = torch.device(f"cuda:{run_config.local_rank}") if run_config.distributed else torch.device('cuda:0')
@@ -105,7 +105,7 @@ class BenchmarkBackend(TorchDistributedBackend):
                 dtype=self._dtype,
                 mp_size=self._run_config.world_size,
                 replace_with_kernel_inject = self._run_config.use_kernel,
-                max_tokens = self._run_config.max_tokens)
+                max_tokens = self._run_config.max_new_tokens + self._run_config.seq_len + 1,)
 
         self._model.cuda().to(self._device)
         torch.cuda.empty_cache()

@@ -2,4 +2,3 @@ torch==2.0.1
 transformers==4.30.2
 deepspeed==0.9.4
 SentencePiece==0.1.99
-accelerate==0.20.3
