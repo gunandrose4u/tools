@@ -20,12 +20,16 @@ do
 for seq_len in 128 512 1024
 do
 for num_beams in 1 4
-    echo "model: $model, batch_size: $b, token_len: $seq_len, max_new_tokens: $max_new_tokens, num_beams: $num_beams"
-    python runner.py -m $model -t 30 -b $b --max_new_tokens $max_new_tokens --seq_len $seq_len  --num_beams $num_beams --use_cache --token_metrics
+do
+echo "model: $model, batch_size: $b, token_len: $seq_len, max_new_tokens: $max_new_tokens, num_beams: $num_beams"
+python runner.py -m $model -t 30 -b $b --max_new_tokens $max_new_tokens --seq_len $seq_len  --num_beams $num_beams --use_cache --token_metrics
 done
 done
 done
 done
+done
+
+
 
 # large model
 # for model in decapoda-research/llama-30b-hf decapoda-research/llama-65b-hf microsoft/bloom-deepspeed-inference-fp16
