@@ -46,9 +46,9 @@ class TokenTimestampRecoder(StoppingCriteria):
         self.timestamps.append(token_time)
         return False
 
-class BenchmarkBackend(TorchDistributedBackend):
+class HuggingFaceNlpGenerativeBackend(TorchDistributedBackend):
     def __init__(self, run_config):
-        super(BenchmarkBackend, self).__init__(run_config)
+        super(HuggingFaceNlpGenerativeBackend, self).__init__(run_config)
         self._model_name = run_config.model
         record_all_tokens =  os.getenv("RECORD_ALL_TOKENS", None)
         if record_all_tokens:
@@ -154,3 +154,9 @@ class BenchmarkBackend(TorchDistributedBackend):
             self._generate_kwargs["stopping_criteria"] = StoppingCriteriaList([self._token_timestamp_recoder])
 
         print_dict("Huggingface text generation configs used", self._generate_kwargs)
+
+
+
+class BenchmarkBackend(HuggingFaceNlpGenerativeBackend):
+    def __init__(self, run_config):
+        super(BenchmarkBackend, self).__init__(run_config)
