@@ -46,6 +46,11 @@ class MsBloomDeepSpeedBackend(HuggingFaceNlpGenerativeBackend):
         deepspeed.init_distributed("nccl")
         self._rank = dist.get_rank()
 
+        # since we're using deepspeed, set to False avoid get error as below:
+        # AttributeError: 'DeepSpeedBloomInference' object has no attribute 'dtype'
+        # It is introduced by enable torch.autocast
+        self._amp_enabled = False
+
     def load_model(self):
         logger.info(f"Loading model {self._model_name}...")
 
@@ -57,7 +62,6 @@ class MsBloomDeepSpeedBackend(HuggingFaceNlpGenerativeBackend):
         # use one of these args to `init_inference`
         # 1. injection_policy is the slower version, but it's plain pytorch so it'll always work
         # 2. replace_with_self._run_config.use_kernel is the faster one (fast fused kernels)
-        self._run_config.use_kernel = True
         if self._run_config.use_kernel:
             # XXX: for now ds-inference only works with fp16
             dtype = torch.float16
