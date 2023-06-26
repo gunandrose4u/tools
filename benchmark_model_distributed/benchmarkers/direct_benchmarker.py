@@ -24,7 +24,7 @@ class DirectBenchmarker(Benchmarker):
         logger.info(f"Benchmark finished")
 
         return self._collect_metrics()
-    
+
     def _collect_metrics(self):
         predict_times = []
         for bk in self._backends:
@@ -49,13 +49,28 @@ class DirectBenchmarker(Benchmarker):
         logger.info(f"Benchmark with number {bk_id} backend finished")
 
     def _get_percentile_metrics(self, res_benchmark, raw_metrics, prefix=""):
-        res_benchmark[f'{prefix}min'] = np.min(raw_metrics)
-        res_benchmark[f'{prefix}max'] = np.max(raw_metrics)
-        res_benchmark[f'{prefix}mean'] = np.mean(raw_metrics)
-        res_benchmark[f'{prefix}50pt'] = np.percentile(raw_metrics, 50)
-        res_benchmark[f'{prefix}90pt'] = np.percentile(raw_metrics, 90)
-        res_benchmark[f'{prefix}95pt'] = np.percentile(raw_metrics, 95)
-        res_benchmark[f'{prefix}99pt'] = np.percentile(raw_metrics, 99)
-        res_benchmark[f'{prefix}99.9pt'] = np.percentile(raw_metrics, 99.9)
-        res_benchmark[f'{prefix}var'] = np.std(raw_metrics) / np.mean(raw_metrics)
-        res_benchmark[f'{prefix}std'] = np.std(raw_metrics)
+        if res_benchmark is None:
+            return
+
+        if raw_metrics:
+            res_benchmark[f'{prefix}min'] = np.min(raw_metrics)
+            res_benchmark[f'{prefix}max'] = np.max(raw_metrics)
+            res_benchmark[f'{prefix}mean'] = np.mean(raw_metrics)
+            res_benchmark[f'{prefix}50pt'] = np.percentile(raw_metrics, 50)
+            res_benchmark[f'{prefix}90pt'] = np.percentile(raw_metrics, 90)
+            res_benchmark[f'{prefix}95pt'] = np.percentile(raw_metrics, 95)
+            res_benchmark[f'{prefix}99pt'] = np.percentile(raw_metrics, 99)
+            res_benchmark[f'{prefix}99.9pt'] = np.percentile(raw_metrics, 99.9)
+            res_benchmark[f'{prefix}var'] = np.std(raw_metrics) / np.mean(raw_metrics)
+            res_benchmark[f'{prefix}std'] = np.std(raw_metrics)
+        else:
+            res_benchmark[f'{prefix}min'] = 0
+            res_benchmark[f'{prefix}max'] = 0
+            res_benchmark[f'{prefix}mean'] = 0
+            res_benchmark[f'{prefix}50pt'] = 0
+            res_benchmark[f'{prefix}90pt'] = 0
+            res_benchmark[f'{prefix}95pt'] = 0
+            res_benchmark[f'{prefix}99pt'] = 0
+            res_benchmark[f'{prefix}99.9pt'] = 0
+            res_benchmark[f'{prefix}var'] = 0
+            res_benchmark[f'{prefix}std'] = 0

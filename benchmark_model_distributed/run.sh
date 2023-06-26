@@ -15,7 +15,7 @@ for model in facebook/opt-1.3b t5-3b EleutherAI/gpt-j-6B decapoda-research/llama
 do
 for b in 1 16
 do
-for max_new_tokens in 1 128
+for max_new_tokens in 2 128
 do
 for seq_len in 128 512 1024
 do
