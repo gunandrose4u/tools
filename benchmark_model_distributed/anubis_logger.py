@@ -21,15 +21,16 @@ logger.addFilter(ContextFilter())
 
 task_working_dir = os.getenv('ANUBIS_WORKING_DIR')
 
-handler = logging.StreamHandler(sys.stdout)
-if task_working_dir:
-    handler = logging.FileHandler(f"{task_working_dir.rstrip('/')}/logs/AnubisTaskExecutor.log")
+if local_rank == 0:
+    handler = logging.StreamHandler(sys.stdout)
+    if task_working_dir:
+        handler = logging.FileHandler(f"{task_working_dir.rstrip('/')}/logs/AnubisTaskExecutor.log")
 
-handler.setLevel(log_level)
-if log_level == logging.INFO:
-    formatter = logging.Formatter('%(asctime)s - %(local_rank)s - %(levelname)s - %(message)s')
-else:
-    formatter = logging.Formatter('%(asctime)s - %(local_rank)s - %(pathname)s [line:%(lineno)d] %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-if not logger.handlers:
-    logger.addHandler(handler)
+    handler.setLevel(log_level)
+    if log_level == logging.INFO:
+        formatter = logging.Formatter('%(asctime)s - %(local_rank)s - %(levelname)s - %(message)s')
+    else:
+        formatter = logging.Formatter('%(asctime)s - %(local_rank)s - %(pathname)s [line:%(lineno)d] %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    if not logger.handlers:
+        logger.addHandler(handler)

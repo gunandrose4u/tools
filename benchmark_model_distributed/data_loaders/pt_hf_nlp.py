@@ -41,7 +41,7 @@ LLAMA_MODEL_NAMES = [
     "decapoda-research/llama-65b-hf"
 ]
 
-class BenchmarkDataLoader(DataLoader):
+class HuggingFaceNlpDataLoader(DataLoader):
     def __init__(self, run_config):
         super().__init__(run_config)
         if run_config.model in LLAMA_MODEL_NAMES:
@@ -103,3 +103,8 @@ class BenchmarkDataLoader(DataLoader):
             logger.info(F"Output data shape: {results.shape}")
             decoded = self._tokenizer.batch_decode(results, skip_special_tokens=True, clean_up_tokenization_spaces=False)
             logger.info(F"Output decoded data: {decoded}")
+
+
+class BenchmarkDataLoader(HuggingFaceNlpDataLoader):
+    def __init__(self, run_config):
+        super(BenchmarkDataLoader, self).__init__(run_config)

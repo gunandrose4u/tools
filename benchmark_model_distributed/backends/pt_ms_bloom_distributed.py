@@ -51,6 +51,9 @@ class MsBloomDeepSpeedBackend(HuggingFaceNlpGenerativeBackend):
         # It is introduced by enable torch.autocast
         self._amp_enabled = False
 
+        if not run_config.distributed:
+            raise ValueError("Model microsoft/bloom-deepspeed-inference inference only works with distributed mode")
+
     def load_model(self):
         logger.info(f"Loading model {self._model_name}...")
 

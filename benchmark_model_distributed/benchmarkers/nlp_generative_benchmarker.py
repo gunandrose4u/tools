@@ -38,7 +38,7 @@ class NlpGenerativeBenchmarker(DirectBenchmarker):
                     token_phase_predict_times.append(query_predict_times[i] - prompt_phase_predict_times[i])
             self._get_percentile_metrics(res_benchmark, token_phase_predict_times, 'token_phase_latency_')
 
-            if not self._run_config.verbose:
+            if self._run_config.verbose:
                 logger.info(f"query_predict_times\n{query_predict_times}")
                 logger.info(f"prompt_phase_predict_times\n{prompt_phase_predict_times}")
                 logger.info(f"token_phase_predict_times\n{token_phase_predict_times}")
