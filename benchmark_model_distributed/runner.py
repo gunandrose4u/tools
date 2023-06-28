@@ -29,6 +29,26 @@ class MultiBackendsRunner(object):
             print_dict("Benchmark result", res_benchmark)
             save_dict_to_csv(res_benchmark, self._run_config.result_csv)
 
+# For large LLM model, it takes a long time to load the model,
+# so we only load the model once and run the benchmark multiple
+# times in the same process with this MultiConfigRunner.
+# multiconfig allowed:
+#   batch_size
+#   seq_len
+class MultiConfigRunner(MultiBackendsRunner):
+    def __init__(self, run_config, batch_sizes, seq_lens):
+        super().__init__(run_config, backend_nums=1)
+        self._batch_sizes = batch_sizes
+        self._seq_lens = seq_lens
+
+    def run(self):
+        for seq_len in self._seq_lens:
+            self._run_config.seq_len = seq_len
+            for batch_size in self._batch_sizes:
+                self._run_config.batch_size = batch_size
+                self._data_loader = self._data_loader_factory.get_data_loader(self._run_config)
+                super().run()
+
 class Runner(MultiBackendsRunner):
     def __init__(self, run_config):
         super().__init__(run_config, backend_nums=1)
@@ -44,6 +64,8 @@ def main():
 
     print_dict("Run config", run_config.__dict__)
 
+    # MultiConfigRunner example
+    # runner = MultiConfigRunner(run_config, [1, 2, 4, 8, 16, 32, 64, 128], [128, 256, 512, 1024, 2048, 4096])
     runner = Runner(run_config)
     runner.run()
 

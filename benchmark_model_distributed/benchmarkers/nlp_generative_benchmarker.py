@@ -49,7 +49,6 @@ class NlpGenerativeBenchmarker(DirectBenchmarker):
                 self._get_percentile_metrics(res_benchmark, token_phase_predict_times_from_token_recoder, 'r_token_phase_latency_')
                 res_benchmark["r_token/s"] = 1 / np.mean(token_phase_predict_times_from_token_recoder)
 
-            res_benchmark["token/s"] = (self._run_config.max_new_tokens - 1) / np.mean(token_phase_predict_times)
-
+            res_benchmark["token/s"] = (self._run_config.max_new_tokens - 1) / np.mean(token_phase_predict_times) if token_phase_predict_times else 0
 
         return res_benchmark

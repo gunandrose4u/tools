@@ -111,7 +111,6 @@ class HuggingFaceNlpGenerativeBackend(TorchDistributedBackend):
         torch.cuda.empty_cache()
 
     def predict(self, input_tokens):
-        # return
         with torch.inference_mode(), torch.autocast(device_type='cuda', enabled=self._amp_enabled, dtype=self._dtype if self._amp_enabled else None):
             for t in input_tokens:
                 input_tokens[t] = input_tokens[t].to(self._device)
@@ -119,7 +118,7 @@ class HuggingFaceNlpGenerativeBackend(TorchDistributedBackend):
             outputs = self._model.generate(
                 **input_tokens,
                 **self._generate_kwargs,
-                )
+            )
 
             return outputs.to('cpu').numpy()
 
