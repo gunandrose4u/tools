@@ -203,8 +203,8 @@ class MlPerfBenchmarker(Benchmarker):
                 if m:
                     rt[m.group(1).strip()] = m.group(2).strip()
 
-        def ns(n):
-            return "{:.2f}".format(float(rt[n]) / 1000000.)
+        def ms(n):
+            return float(f"{(float(rt[n]) / 1000000.):.3f}")
 
         def yes_no(n):
             if n.lower() in ["yes", "true", "valid"]:
@@ -227,14 +227,14 @@ class MlPerfBenchmarker(Benchmarker):
         res_benchmark["mode"] = rt["Mode"]
         res_benchmark["scenario"] = self._run_config.mlperf_scenario
         res_benchmark["qps"] = rt.get(metric(self._run_config.mlperf_scenario))
-        res_benchmark["mean"] = ns('Mean latency (ns)')
-        res_benchmark["min"] = ns('Min latency (ns)')
-        res_benchmark["max"] = ns('Max latency (ns)')
-        res_benchmark["50pt"] = ns('50.00 percentile latency (ns)')
-        res_benchmark["90pt"] = ns('90.00 percentile latency (ns)')
-        res_benchmark["95pt"] = ns('95.00 percentile latency (ns)')
-        res_benchmark["99pt"] = ns('99.00 percentile latency (ns)')
-        res_benchmark["99.9pt"] = ns('99.90 percentile latency (ns)')
+        res_benchmark["mean"] = ms('Mean latency (ns)')
+        res_benchmark["min"] = ms('Min latency (ns)')
+        res_benchmark["max"] = ms('Max latency (ns)')
+        res_benchmark["50pt"] = ms('50.00 percentile latency (ns)')
+        res_benchmark["90pt"] = ms('90.00 percentile latency (ns)')
+        res_benchmark["95pt"] = ms('95.00 percentile latency (ns)')
+        res_benchmark["99pt"] = ms('99.00 percentile latency (ns)')
+        res_benchmark["99.9pt"] = ms('99.90 percentile latency (ns)')
         res_benchmark["valid"] = is_valid
         res_benchmark["perf_ok"] = yes_no(rt.get('Performance constraints satisfied', "YES"))
         res_benchmark["mindur_ok"] = yes_no(rt['Min duration satisfied'])
@@ -262,6 +262,6 @@ class MlPerfBenchmarker(Benchmarker):
         res_benchmark['warmup_times'] = self._run_config.warmup_times
         res_benchmark['var'] = np.std(predict_times_in_ms) / np.mean(predict_times_in_ms)
         res_benchmark['std'] = np.std(predict_times_in_ms)
-        res_benchmark['duration'] = self._benchmark_end - self._benchmark_start
+        res_benchmark['duration_sec'] = self._benchmark_end - self._benchmark_start
 
         return res_benchmark
