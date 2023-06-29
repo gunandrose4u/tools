@@ -22,12 +22,20 @@ class Benchmarker(ABC):
         logger.info(f"Warmup model for {self._run_config.warmup_times} times")
         for i in range(self._run_config.warmup_times):
             for bk in self._backends:
-                bk.predict(self._data_loader.get_batch_items(self._batch_size))
+                input = self._data_loader.get_batch_items(self._batch_size)
+                if i == 0:
+                    self._print_benchmark_input(input)
+                bk.predict(input)
+
         logger.info(f"Warmup finished")
 
     @abstractmethod
     def run(self):
         raise NotImplementedError()
+
+    def _print_benchmark_input(self, input):
+        for k in input:
+            logger.info(F"Benchmark input data shape: {k}={input[k].shape}")
 
     def _collect_metrics(self):
         predict_times = []

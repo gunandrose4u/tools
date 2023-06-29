@@ -5,9 +5,9 @@ import deepspeed
 
 from anubis_logger import logger
 from utilities import print_dict
-from backend import TorchDistributedBackend
+from backend import NlpGenerativeBackend
 
-from time import perf_counter, perf_counter_ns
+from time import perf_counter
 
 from transformers import AutoModelForCausalLM, T5ForConditionalGeneration
 from transformers import StoppingCriteria, StoppingCriteriaList
@@ -46,7 +46,7 @@ class TokenTimestampRecoder(StoppingCriteria):
         self.timestamps.append(token_time)
         return False
 
-class HuggingFaceNlpGenerativeBackend(TorchDistributedBackend):
+class HuggingFaceNlpGenerativeBackend(NlpGenerativeBackend):
     def __init__(self, run_config):
         super(HuggingFaceNlpGenerativeBackend, self).__init__(run_config)
         self._model_name = run_config.model

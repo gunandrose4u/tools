@@ -54,26 +54,25 @@ class MsBloomDeepSpeedBackend(HuggingFaceNlpGenerativeBackend):
         if not run_config.distributed:
             raise ValueError("Model microsoft/bloom-deepspeed-inference inference only works with distributed mode")
 
+        if self._dtype != torch.float16:
+            raise ValueError("Model microsoft/bloom-deepspeed-inference only supports fp16")
+
     def load_model(self):
         logger.info(f"Loading model {self._model_name}...")
 
         config = AutoConfig.from_pretrained(self._model_name)
         # XXX: can't automatically derive dtype via config's `from_pretrained`
         # dtype = torch.bfloat16 if model_name in ["bigscience/bloom", "bigscience/bigscience-small-testing"] else torch.float16
-
+        # XXX: for now ds-inference only works with fp16
+        # dtype = torch.float16
 
         # use one of these args to `init_inference`
         # 1. injection_policy is the slower version, but it's plain pytorch so it'll always work
         # 2. replace_with_self._run_config.use_kernel is the faster one (fast fused kernels)
-        if self._run_config.use_kernel:
-            # XXX: for now ds-inference only works with fp16
-            dtype = torch.float16
-        else:
-            dtype = torch.bfloat16
 
         self._clear_memory("pre-from-pretrained")
         # Construct model with fake meta tensors, later will be replaced during ds-inference ckpt load
-        with deepspeed.OnDevice(dtype=dtype, device="meta"):
+        with deepspeed.OnDevice(dtype=self._dtype, device="meta"):
             self._model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
 
         deepspeed.runtime.utils.see_memory_usage("post-from-pretrained", force=True)

@@ -4,7 +4,9 @@ import os
 import json
 
 from anubis_logger import logger
-from supported_models import SUPPORTED_MODELS
+from supported_models import SUPPORTED_MODELS, BENCHMARKER_MAPPING
+from benchmarkers.mlperf.const import SINGLESTREAM, OFFLINE
+
 
 DEFAULT_METRICS_CSV_FILE = "metrics.csv"
 
@@ -192,7 +194,7 @@ def parse_arguments():
         "--benchmarker",
         required=False,
         type=str,
-        choices=["nlp_generative"],
+        choices=BENCHMARKER_MAPPING.keys(),
         help="Benchmarker to benchmark",
     )
 
@@ -251,6 +253,16 @@ def parse_arguments():
         It is auto set when lunching runner.py by distributed launcher
         like torchrun, deepspeed, mpi, etc.
         When running in distributed mode, get local_rank from env vars."""
+    )
+
+    # mlperf params
+    parser.add_argument(
+        "--mlperf_scenario",
+        required=False,
+        type=str,
+        default=SINGLESTREAM,
+        choices=[SINGLESTREAM, OFFLINE],
+        help="Mlperf scenario",
     )
 
     args = parser.parse_args()

@@ -1,6 +1,5 @@
 import sys
 import pathlib
-import torch
 
 from time import perf_counter
 
@@ -8,6 +7,8 @@ class Backend():
     def __init__(self, run_config):
         self._run_config = run_config
         self.predict_times = []
+        self.start_predict_time = None
+        self.end_predict_time = None
 
     def model_info(self):
         raise NotImplementedError("Backend:model_info")
@@ -25,32 +26,19 @@ class Backend():
         raise NotImplementedError("Backend:predict")
 
     def predict_with_perf(self, inputs):
-        start = perf_counter()
+        self.start_predict_time = perf_counter()
         res = self.predict(inputs)
-        end = perf_counter()
-        self.predict_times.append((end-start))
+        self.end_predict_time = perf_counter()
+        self.predict_times.append((self.end_predict_time-self.start_predict_time))
         return res
 
     def clear_perf_details(self):
         self.predict_times.clear()
 
-class TorchDistributedBackend(Backend):
+class NlpGenerativeBackend(Backend):
     def __init__(self, run_config):
         super().__init__(run_config)
         self.token_predict_times = []
-        self.start_predict_time = None
-        self.end_predict_time = None
-
-    def predict_with_perf(self, inputs):
-        if self._run_config.distributed:
-            torch.cuda.synchronize()
-        self.start_predict_time = perf_counter()
-        res = self.predict(inputs)
-        if self._run_config.distributed:
-            torch.cuda.synchronize()
-        self.end_predict_time = perf_counter()
-        self.predict_times.append((self.end_predict_time-self.start_predict_time))
-        return res
 
 class BackendFactory():
     def __init__(self):

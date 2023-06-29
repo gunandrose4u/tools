@@ -1,9 +1,14 @@
 
 from benchmarkers.direct_benchmarker import DirectBenchmarker
+# from benchmarkers.mlperf.mlperf_benchmarker import MlPerfBenchmarker
 from benchmarkers.nlp_generative_benchmarker import NlpGenerativeBenchmarker
 
+
+# Will release direct and mlperf benchmarker in the future
+# if you need to use them, please uncomment the following lines
 BENCHMARKER_MAPPING = {
-    "direct": DirectBenchmarker,
+    # "direct": DirectBenchmarker,
+    # "mlperf": MlPerfBenchmarker,
     "nlp_generative": NlpGenerativeBenchmarker,
 }
 

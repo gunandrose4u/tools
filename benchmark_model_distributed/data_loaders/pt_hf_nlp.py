@@ -63,40 +63,51 @@ class HuggingFaceNlpDataLoader(DataLoader):
 
         self._loaded_data_x = []
         one_data_item = None
+        meet_seq_len_inputs = []
         if run_config.seq_len > 1:
-            batch_inputs = {}
-            for sen in input_sentences[:run_config.batch_size]:
+            for sen in input_sentences:
                 token = self._tokenizer(sen, return_tensors="pt")
+                meet_seq_len_input = {}
                 for k in token:
                     rp_times = math.ceil(run_config.seq_len / len(token[k][0]))
                     new_token = token[k][0].repeat((1, rp_times))
                     new_token = torch.tensor(new_token[0].numpy()[:run_config.seq_len]).reshape(1, run_config.seq_len)
-                    if k not in batch_inputs:
-                        batch_inputs[k] = new_token
-                    else:
-                        batch_inputs[k] = torch.cat((batch_inputs[k], new_token), dim=0)
-            one_data_item = batch_inputs
+                    meet_seq_len_input[k] = new_token
+
+                meet_seq_len_inputs.append(meet_seq_len_input)
+
+            if len(meet_seq_len_inputs) >= run_config.total_sample_count:
+                self._loaded_data_x = meet_seq_len_inputs[:run_config.total_sample_count]
+            else:
+                for _ in range(run_config.total_sample_count):
+                    self._loaded_data_x.append(meet_seq_len_inputs[np.random.randint(len(meet_seq_len_inputs))])
         else:
+            # Since seq_len must be > 1, so this is just for padding
+            # test internally, not exposed for user to use. Need by pass
+            # the seq_len check in run_config
             tokens = self._tokenizer.batch_encode_plus(
                 input_sentences[:run_config.batch_size],
                 return_tensors="pt",
                 padding=True)
             one_data_item = tokens
 
-        for _ in range(run_config.total_sample_count):
-            self._loaded_data_x.append(one_data_item)
+            for _ in range(run_config.total_sample_count):
+                self._loaded_data_x.append(one_data_item)
 
         for k in self._loaded_data_x[0]:
-            logger.info(F"Input data shape: {k}={self._loaded_data_x[0][k].shape}")
+            logger.info(F"Loaded data shape: {k}={self._loaded_data_x[0][k].shape}")
 
         if run_config.verbose:
-            logger.info(F"Input data: {batch_inputs}")
+            logger.info(F"Loaded data: {meet_seq_len_inputs}")
 
-        np.random.seed(20230621)
+    def get_batch_items(self, batch_size):
+        return super().get_batch_items(batch_size)
 
-    # ignore batch_size here, when init data, we create batch of data in one item
-    def get_batch_items(self, batch_size=1):
-        return self.get_item_loc(np.random.randint(len(self._loaded_data_x)))
+    def make_batch(self, data_array, selected_indeices):
+        batch_inputs = {}
+        for k in data_array[0]:
+            batch_inputs[k] = torch.cat([data_array[i][k] for i in selected_indeices], dim=0)
+        return batch_inputs
 
     def post_process(self, results):
         if self._run_config.verbose:
