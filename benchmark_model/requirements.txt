@@ -1,4 +1,0 @@
-pyaml
-transformers==4.8.2
-onnxruntime
-torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu

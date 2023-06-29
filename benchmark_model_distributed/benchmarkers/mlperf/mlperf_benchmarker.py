@@ -240,8 +240,10 @@ class MlPerfBenchmarker(Benchmarker):
         res_benchmark["mindur_ok"] = yes_no(rt['Min duration satisfied'])
         res_benchmark["minqs_ok"] = yes_no(rt['Min queries satisfied'])
 
-        t_res_benchmark = self._collect_metrics()
-        res_benchmark.update(t_res_benchmark)
+        if self._run_config.verbose:
+            t_res_benchmark = self._collect_metrics()
+            res_benchmark.update(t_res_benchmark)
+
         return res_benchmark
 
     def run(self):
