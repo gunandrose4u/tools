@@ -256,14 +256,15 @@ def parse_arguments():
     )
 
     # mlperf params
-    parser.add_argument(
-        "--mlperf_scenario",
-        required=False,
-        type=str,
-        default=SINGLESTREAM,
-        choices=[SINGLESTREAM, OFFLINE],
-        help="Mlperf scenario",
-    )
+    if "mlperf" in BENCHMARKER_MAPPING.keys():
+        parser.add_argument(
+            "--mlperf_scenario",
+            required=False,
+            type=str,
+            default=SINGLESTREAM,
+            choices=[SINGLESTREAM, OFFLINE],
+            help="Mlperf scenario",
+        )
 
     args = parser.parse_args()
     run_config_validation(args)
