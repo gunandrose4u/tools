@@ -12,8 +12,10 @@ BENCHMARKER_MAPPING = {
     "nlp_generative": NlpGenerativeBenchmarker,
 }
 
+# backend, dataloader, benchmarker
 PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG = ["pt_hf_nlp_distributed", "pt_hf_nlp", "nlp_generative"]
 PT_MS_BLOOM_GENERATIVE_BENCHMARK_CONFIG = ["pt_ms_bloom_distributed", "pt_hf_nlp", "nlp_generative"]
+PT_MS_MOE_GENERATIVE_BENCHMARK_CONFIG = ["pt_ms_moe_distributed", "pt_moe_nlp", "nlp_generative"]
 
 SUPPORTED_MODELS = {
     "facebook/opt-1.3b": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
@@ -26,4 +28,5 @@ SUPPORTED_MODELS = {
     "bigscience/bloom-7b1": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
     "bigscience/bloom": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,
     "microsoft/bloom-deepspeed-inference-fp16": PT_MS_BLOOM_GENERATIVE_BENCHMARK_CONFIG,
+    "microsoft/moe-deepspeed-inference-fp16": PT_MS_MOE_GENERATIVE_BENCHMARK_CONFIG,
 }
