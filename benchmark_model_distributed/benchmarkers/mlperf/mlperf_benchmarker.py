@@ -12,7 +12,7 @@ import threading
 import mlperf_loadgen as lg
 
 from abc import abstractmethod, ABC
-from queue import Queue
+from queue import Queue, Empty
 from time import perf_counter
 
 from anubis_logger import logger
@@ -27,6 +27,7 @@ from benchmarkers.mlperf.const import (
     SERVER,
     MLPERF_DEDAULT_SETTINGS,
     PERFORMANCEONLY_MODE,
+    FINDPEAKPERFORMANCE_MODE,
 )
 
 
@@ -41,7 +42,11 @@ class ScenarioProcessor(ABC):
     # but with different query_id.
     # Same idx means same data, so we do not need handle
     # idx distributed here when benchmark with distributed mode
+    @abstractmethod
     def dispatch(self, query_samples):
+        raise NotImplementedError()
+
+    def _dispatch_queries(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
         logger.debug(f"Dispatching query {query_id} with indices {idx}")
@@ -66,15 +71,63 @@ class SingleStreamProcessor(ScenarioProcessor):
         self._backends_count = backends_count
         self._backend_selector = 0
 
+    def dispatch(self, query_samples):
+        self._dispatch_queries(query_samples)
+
     def process_batch_query(self, batch_query):
         self._process_fn(batch_query, self._backend_selector % self._backends_count)
         self._backend_selector += 1
 
 
+class ServerProcessor(ScenarioProcessor):
+    def __init__(self, process_fn, batch_size, dataset, threads=1, backends_count=1):
+        super(ServerProcessor, self).__init__(process_fn, batch_size, dataset)
+        self._query_dispatch_queue = Queue(maxsize=threads * backends_count * 100)
+        self._workers = []
+
+        for bk_id in range(backends_count):
+            for _ in range(threads):
+                worker = threading.Thread(target=self._handle_query, args=(self._query_dispatch_queue, bk_id, ))
+                worker.daemon = True
+                self._workers.append(worker)
+                worker.start()
+
+    def dispatch(self, query_samples):
+        idx = [q.index for q in query_samples]
+        query_id = [q.id for q in query_samples]
+        logger.debug(f"Server mode dispatching query {query_id} with indices {idx}")
+        self._query_dispatch_queue.put(query_samples)
+
+    def _handle_query(self, query_queue, bk_id):
+        """Worker thread."""
+        while True:
+            batch_queries = []
+            query_samples = query_queue.get()
+            query_queue.task_done()
+            batch_queries.append(query_samples)
+            for _ in range(self._batch_size - 1):
+                try:
+                    query_samples = query_queue.get(False)
+                    query_queue.task_done()
+                    batch_queries.append(query_samples)
+                except Empty:
+                    break
+
+            if batch_queries:
+                idx = [q[0].index for q in batch_queries]
+                query_id = [q[0].id for q in batch_queries]
+                logger.debug(f"Server mode processing batch query {query_id} with indices {idx}")
+                feed = self._ds.make_batch(idx)
+                self._process_fn((query_id, idx, feed), bk_id)
+
+    def process_batch_query(self, batch_query):
+        raise NotImplementedError()
+
+
 class OfflineProcessor(ScenarioProcessor):
     def __init__(self, process_fn, batch_size, dataset, threads=2, backends_count=1):
         super(OfflineProcessor, self).__init__(process_fn, batch_size, dataset)
-        self._batch_query_dispatch_queue = Queue(maxsize=threads * 4)
+        self._batch_query_dispatch_queue = Queue(maxsize=threads * backends_count * 4)
         self._workers = []
 
         for bk_id in range(backends_count):
@@ -94,12 +147,22 @@ class OfflineProcessor(ScenarioProcessor):
                 break
             self._process_fn(batch_query, bk_id)
 
+    # Since in offline scenario, all samples send in one query
+    # we should not block loadgen thread, so we start a dispatch thread
+    # Compare to call _dispatch_queries directly, this will increase
+    # around 0.7ms pt 99.9 latency.
+    def dispatch(self, query_samples):
+        # self._dispatch_queries(query_samples)
+        threading.Thread(target=self._dispatch_queries,
+                     args=[query_samples]).start()
+
     def process_batch_query(self, batch_query):
         self._batch_query_dispatch_queue.put(batch_query)
 
 SCENARIO_MAPPING = {
     SINGLESTREAM: [SingleStreamProcessor, lg.TestScenario.SingleStream],
-    OFFLINE: [OfflineProcessor, lg.TestScenario.Offline]
+    OFFLINE: [OfflineProcessor, lg.TestScenario.Offline],
+    SERVER: [ServerProcessor, lg.TestScenario.Server],
 }
 
 class MlPerfBenchmarker(Benchmarker):
@@ -145,21 +208,19 @@ class MlPerfBenchmarker(Benchmarker):
         self._test_settings.scenario = SCENARIO_MAPPING[self._run_config.mlperf_scenario][1]
         self._test_settings.mode = lg.TestMode.PerformanceOnly
 
-        if self._run_config.mlperf_scenario == SINGLESTREAM:
+        if self._run_config.mlperf_scenario == SINGLESTREAM or self._run_config.mlperf_scenario == SERVER:
             self._test_settings.min_query_count = self._run_config.test_times
-        if self._run_config.mlperf_scenario == OFFLINE:
-            self._test_settings.offline_expected_qps = self._run_config.test_times
 
         override_values = test_settings["overrideValues"]
         for k in override_values.keys():
             if hasattr(self._test_settings, k):
                 try:
                     setattr(self._test_settings, k, override_values[k])
-                    logger.info(f"Set test settings {k}={override_values[k]}")
+                    logger.info(f"Set MlPerf test settings {k}={override_values[k]}")
                 except:
-                    logger.warning(f"Can not set test settings {k}={override_values[k]}")
+                    logger.warning(f"Can not set MlPerf test settings {k}={override_values[k]}")
             else:
-                logger.warning(f"Test settings does not contain property {k}")
+                logger.warning(f"MlPerf test settings does not contain property {k}")
 
     def _issue_queries(self, query_samples):
         self._scenario_processor.dispatch(query_samples)

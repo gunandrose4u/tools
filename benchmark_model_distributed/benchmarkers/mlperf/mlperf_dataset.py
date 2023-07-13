@@ -51,7 +51,10 @@ class DataLoaderToMlPerfDataset(MlPerfDataset):
     def load_query_samples(self, sample_list):
         self._data_x_inmemory = {}
         for sample in sample_list:
-            data_tensor = self._data_loader.get_batch_items(self._batch_size_item)
+            data_tensor = {}
+            loaded_tensor = self._data_loader.get_batch_items(self._batch_size_item)
+            for k in loaded_tensor:
+                data_tensor[k] = loaded_tensor[k].detach().clone()
             self._data_x_inmemory[sample] = data_tensor
 
     def unload_query_samples(self, sample_list):

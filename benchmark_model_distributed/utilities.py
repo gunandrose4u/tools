@@ -5,7 +5,7 @@ import json
 
 from anubis_logger import logger
 from supported_models import SUPPORTED_MODELS, BENCHMARKER_MAPPING
-from benchmarkers.mlperf.const import SINGLESTREAM, OFFLINE
+from benchmarkers.mlperf.const import SINGLESTREAM, OFFLINE, SERVER
 
 
 DEFAULT_METRICS_CSV_FILE = "metrics.csv"
@@ -262,7 +262,7 @@ def parse_arguments():
             required=False,
             type=str,
             default=SINGLESTREAM,
-            choices=[SINGLESTREAM, OFFLINE],
+            choices=[SINGLESTREAM, OFFLINE, SERVER],
             help="Mlperf scenario",
         )
 

@@ -13,6 +13,7 @@ SERVER = "server"
 
 PERFORMANCEONLY_MODE = "PerformanceOnly"
 ACCURACYONLY_MODE = "AccuracyOnly"
+FINDPEAKPERFORMANCE_MODE = "FindPeakPerformance"
 
 DEFAULT_MLPERF_CONFIG = os.path.join(curdir, "mlperf.conf")
 
@@ -30,7 +31,9 @@ MLPERF_DEDAULT_SETTINGS = {
         "fromFile": "",
         "overrideValues": {
             "single_stream_expected_latency_ns": 1131321,
-            "offline_expected_qps": 10
+            "offline_expected_qps": 200,
+            "server_target_latency_ns": 100000000,
+            "server_target_qps": 30
         }
     }
 }
