@@ -34,8 +34,14 @@ class Benchmarker(ABC):
         raise NotImplementedError()
 
     def _print_benchmark_input(self, input):
-        for k in input:
-            logger.info(F"Benchmark input data shape: {k}={input[k].shape}")
+        if isinstance(input, dict):
+            for k in input:
+                logger.info(f"Benchmark input data shape: {k}={input[k].shape}")
+        if isinstance(input, list):  # For MoE case
+            if isinstance(input[0], int):  # batch_size == 1
+                logger.info(f"Benchmark input data shape: [{len(input)}]")
+            else:
+                logger.info(f"Benchmark input data shape: [{len(input)}, {len(input[0])}]")
 
     def _collect_metrics(self):
         predict_times = []
