@@ -86,6 +86,7 @@ class HuggingFaceNlpGenerativeBackend(NlpGenerativeBackend):
         return "pytorch"
 
     def load_model(self):
+        # return
         logger.info(f"Loading model {self._model_name}...")
         if self._model_name in CUSTOMIZED_CAUSAL_LM_MODELS:
             self._model = CUSTOMIZED_CAUSAL_LM_MODELS[self._model_name].from_pretrained(
@@ -112,11 +113,12 @@ class HuggingFaceNlpGenerativeBackend(NlpGenerativeBackend):
 
     def predict(self, input_tokens):
         with torch.inference_mode(), torch.autocast(device_type='cuda', enabled=self._amp_enabled, dtype=self._dtype if self._amp_enabled else None):
+            copied_tensors = {}
             for t in input_tokens:
-                input_tokens[t] = input_tokens[t].to(self._device)
+                copied_tensors[t] = input_tokens[t].to(self._device)
 
             outputs = self._model.generate(
-                **input_tokens,
+                **copied_tensors,
                 **self._generate_kwargs,
             )
 
