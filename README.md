@@ -25,3 +25,13 @@ This tool provides several basic benchmarkers, like mlperf, direct, nlp_generati
 
 ## For more details info
     python runner.py -h
+
+## TTS Reader
+### Install 
+        conda create -n tts_reader python==3.10 -y
+        conda activate tts_reader
+        install.cmd
+### Run
+        python tts_reader_gui.py
+### Notice
+        For fisrt time run, tts_reader need download model from internet, it will take times base on your network condition. 

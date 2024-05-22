@@ -1,0 +1,7 @@
+{
+    "www.shuke8.cc": {
+        "title": "//main[@class='container']/section/div[1]/h1",
+        "article": "//article[@id='article']",
+        "next_page": "//a[@id='keyright']"
+    }
+}

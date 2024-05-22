@@ -1,0 +1,5 @@
+requests
+pyaudio
+keyboard
+lxml
+selenium
