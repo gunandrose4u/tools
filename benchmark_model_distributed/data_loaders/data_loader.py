@@ -38,9 +38,13 @@ class DataLoader(ABC):
 
 class DataLoaderFactory():
     def __init__(self):
-        curdir = pathlib.Path(__file__).parent.resolve()
-        sys.path.append(str(curdir))
+        self._curdir = pathlib.Path(__file__).parent.resolve()
+        sys.path.append(str(self._curdir))
 
     def get_data_loader(self, run_config):
-        loader_module = __import__(run_config.dataloader, fromlist=['BenchmarkDataLoader'])
+        splited_dl_name = run_config.dataloader.split('.')
+        if len(splited_dl_name) > 1:
+            dl_module_path = str(self._curdir) +  "/".join(splited_dl_name[0:-1])
+            sys.path.append(dl_module_path)
+        loader_module = __import__(splited_dl_name[-1], fromlist=['BenchmarkDataLoader'])
         return loader_module.BenchmarkDataLoader(run_config)

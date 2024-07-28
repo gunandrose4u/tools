@@ -15,7 +15,7 @@ BENCHMARKER_MAPPING = {
 # backend, dataloader, benchmarker
 PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG = ["pt_hf_nlp_distributed", "pt_hf_nlp", "nlp_generative"]
 PT_MS_BLOOM_GENERATIVE_BENCHMARK_CONFIG = ["pt_ms_bloom_distributed", "pt_hf_nlp", "nlp_generative"]
-PT_MS_MOE_GENERATIVE_BENCHMARK_CONFIG = ["pt_ms_moe_distributed", "pt_moe_nlp", "nlp_generative"]
+PT_MS_MOE_GENERATIVE_BENCHMARK_CONFIG = ["pt_ms_moe_distributed", "megatron_deepspeed.pt_moe_nlp", "nlp_generative"]
 
 SUPPORTED_MODELS = {
     "facebook/opt-1.3b": PT_HF_NLP_GENERATIVE_BENCHMARK_CONFIG,

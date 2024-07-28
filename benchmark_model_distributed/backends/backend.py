@@ -42,9 +42,13 @@ class NlpGenerativeBackend(Backend):
 
 class BackendFactory():
     def __init__(self):
-        curdir = pathlib.Path(__file__).parent.resolve()
-        sys.path.append(str(curdir))
+        self._curdir = pathlib.Path(__file__).parent.resolve()
+        sys.path.append(str(self._curdir))
 
     def get_backend(self, run_config):
-        backend_module = __import__(run_config.backend_name, fromlist=['BenchmarkBackend'])
+        splited_bk_name = run_config.backend_name.split('.')
+        if len(splited_bk_name) > 1:
+            backend_module_path = str(self._curdir) +  "/".join(splited_bk_name[0:-1])
+            sys.path.append(backend_module_path)
+        backend_module = __import__(splited_bk_name[-1], fromlist=['BenchmarkBackend'])
         return backend_module.BenchmarkBackend(run_config)
